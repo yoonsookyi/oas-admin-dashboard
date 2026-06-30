@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# 비밀번호/설정 파일
+start.sh
+*.pid
+local_config.py
+
+# OS
+.DS_Store
+Thumbs.db

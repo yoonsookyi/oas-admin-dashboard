@@ -1,0 +1,2264 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OAS Admin Dashboard</title>
+<style>
+:root {
+  --bg: #09090b;
+  --bg2: #111113;
+  --card: #18181b;
+  --card2: #1f1f23;
+  --border: #27272a;
+  --border2: #3f3f46;
+  --text: #fafafa;
+  --text2: #a1a1aa;
+  --muted: #52525b;
+  --green: #22c55e;
+  --green-bg: rgba(34,197,94,.1);
+  --green-bd: rgba(34,197,94,.25);
+  --yellow: #eab308;
+  --yellow-bg: rgba(234,179,8,.1);
+  --yellow-bd: rgba(234,179,8,.25);
+  --red: #ef4444;
+  --red-bg: rgba(239,68,68,.1);
+  --red-bd: rgba(239,68,68,.25);
+  --blue: #3b82f6;
+  --blue-bg: rgba(59,130,246,.1);
+  --blue-bd: rgba(59,130,246,.25);
+  --orange: #f97316;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; font-size:14px; }
+
+/* ── Header ── */
+.hd {
+  position:sticky; top:0; z-index:200;
+  background:rgba(9,9,11,.92); backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  padding:0 28px; height:56px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.hd-left { display:flex; align-items:center; gap:12px; }
+.logo {
+  width:32px; height:32px; border-radius:8px;
+  background:linear-gradient(135deg,#c0392b,#e74c3c);
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:13px; color:#fff; flex-shrink:0;
+}
+.hd-title { font-size:15px; font-weight:600; }
+.hd-sub { font-size:11px; color:var(--muted); }
+.hd-right { display:flex; align-items:center; gap:12px; }
+.pill {
+  display:flex; align-items:center; gap:6px;
+  padding:5px 11px; border-radius:99px; font-size:12px; font-weight:500;
+}
+.dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.dot-green { background:var(--green); box-shadow:0 0 6px var(--green); }
+.dot-red { background:var(--red); }
+.dot-yellow { background:var(--yellow); }
+.dot-gray { background:var(--muted); }
+.ts { font-size:11px; color:var(--muted); }
+
+/* ── Config bar ── */
+.cfg {
+  background:var(--bg2); border-bottom:1px solid var(--border);
+  padding:10px 28px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+}
+.cfg label { font-size:11px; color:var(--muted); margin-right:4px; }
+input[type=text], input[type=password], input[type=number], select {
+  background:var(--card); border:1px solid var(--border);
+  color:var(--text); padding:7px 11px; border-radius:7px;
+  font-size:12px; outline:none; transition:border .15s;
+}
+input:focus, select:focus { border-color:var(--blue); }
+.inp-url { width:260px; }
+.inp-sm  { width:130px; }
+.btn {
+  padding:7px 14px; border-radius:7px; border:none;
+  cursor:pointer; font-size:12px; font-weight:500; transition:opacity .15s;
+}
+.btn:hover { opacity:.85; }
+.btn-primary { background:var(--green); color:#000; }
+.btn-ghost { background:var(--card); color:var(--text2); border:1px solid var(--border); }
+.cs { font-size:11px; }
+
+/* ── Tabs ── */
+.tabs {
+  background:var(--bg2); border-bottom:1px solid var(--border);
+  display:flex; padding:0 28px; overflow-x:auto; gap:0;
+}
+.tabs::-webkit-scrollbar { height:0; }
+.tab {
+  padding:13px 18px; font-size:12px; color:var(--muted);
+  cursor:pointer; border-bottom:2px solid transparent;
+  white-space:nowrap; transition:all .15s; user-select:none;
+}
+.tab:hover { color:var(--text2); }
+.tab.on { color:var(--text); border-bottom-color:var(--green); }
+.tbadge {
+  display:inline-block; background:var(--red); color:#fff;
+  border-radius:99px; padding:1px 5px; font-size:9px; margin-left:5px; vertical-align:middle;
+}
+
+/* ── Layout ── */
+.content { padding:28px; max-width:1380px; margin:0 auto; }
+.panel { display:none; }
+.panel.on { display:block; }
+.sec { margin-bottom:32px; }
+.sec-hd { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; gap:12px; }
+.sec-title { font-size:17px; font-weight:600; }
+.sec-desc { font-size:12px; color:var(--muted); margin-top:3px; }
+.sec-actions { display:flex; gap:8px; flex-shrink:0; }
+
+/* ── Cards ── */
+.card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px; }
+.card-sm { padding:16px 20px; }
+.ct { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; font-weight:500; margin-bottom:12px; }
+.cv { font-size:34px; font-weight:800; line-height:1; }
+.cs2 { font-size:11px; color:var(--muted); margin-top:7px; }
+
+/* ── Grids ── */
+.g4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+.g3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.g2 { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+@media(max-width:900px){
+  .g4{grid-template-columns:repeat(2,1fr);}
+  .g3{grid-template-columns:1fr 1fr;}
+  .g2{grid-template-columns:1fr;}
+  .inp-url{width:100%;}
+}
+@media(max-width:540px){
+  .g4,.g3,.g2{grid-template-columns:1fr;}
+  .content{padding:16px;}
+  .hd{padding:0 16px;}
+}
+
+/* ── Status indicators ── */
+.svc-row { display:flex; align-items:center; gap:8px; }
+.svc-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; transition:background .3s; }
+
+/* ── Progress ── */
+.pbar { background:var(--border); border-radius:99px; height:5px; overflow:hidden; margin-top:6px; }
+.pfill { height:100%; border-radius:99px; transition:width .4s ease; }
+.pf-g { background:var(--green); }
+.pf-y { background:var(--yellow); }
+.pf-r { background:var(--red); }
+.pf-b { background:var(--blue); }
+.res-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; }
+.res-lbl { font-size:12px; color:var(--text2); }
+.res-val { font-size:12px; font-weight:600; }
+
+/* ── Table ── */
+.tbl { width:100%; border-collapse:collapse; font-size:12px; }
+.tbl th {
+  text-align:left; padding:8px 12px; color:var(--muted);
+  font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
+  border-bottom:1px solid var(--border);
+}
+.tbl td { padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text2); vertical-align:middle; }
+.tbl tr:last-child td { border-bottom:none; }
+.tbl tr:hover td { background:var(--card2); }
+.mono { font-family:'Courier New',monospace; font-size:11px; }
+
+/* ── Badges ── */
+.badge {
+  display:inline-flex; align-items:center;
+  padding:2px 8px; border-radius:5px; font-size:10px; font-weight:600;
+}
+.b-red    { background:var(--red-bg);    color:var(--red);    border:1px solid var(--red-bd); }
+.b-yellow { background:var(--yellow-bg); color:var(--yellow); border:1px solid var(--yellow-bd); }
+.b-green  { background:var(--green-bg);  color:var(--green);  border:1px solid var(--green-bd); }
+.b-blue   { background:var(--blue-bg);   color:var(--blue);   border:1px solid var(--blue-bd); }
+.b-gray   { background:var(--card2); color:var(--muted); border:1px solid var(--border); }
+
+/* ── Alert ── */
+.alert {
+  padding:11px 16px; border-radius:9px; font-size:12px;
+  display:flex; align-items:center; gap:8px; margin-bottom:14px;
+}
+.a-warn   { background:var(--yellow-bg); border:1px solid var(--yellow-bd); color:var(--yellow); }
+.a-error  { background:var(--red-bg);    border:1px solid var(--red-bd);    color:var(--red); }
+.a-ok     { background:var(--green-bg);  border:1px solid var(--green-bd);  color:var(--green); }
+
+/* ── Numbers (stat) ── */
+.big-num {
+  font-size:44px; font-weight:800; line-height:1;
+  background:linear-gradient(135deg,#fff,#71717a);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.big-lbl { font-size:13px; color:var(--text2); margin-top:7px; }
+.big-sub  { font-size:11px; color:var(--green); margin-top:3px; }
+
+/* ── Code block ── */
+.cmd {
+  background:var(--bg); border:1px solid var(--border);
+  border-radius:7px; padding:8px 12px;
+  font-family:'Courier New',monospace; font-size:11px; color:var(--green);
+  margin-top:8px; overflow-x:auto; white-space:nowrap;
+}
+
+/* ── Runbook steps ── */
+.rb-step {
+  display:flex; gap:14px; padding:14px 0;
+  border-bottom:1px solid var(--border);
+}
+.rb-step:last-child { border-bottom:none; }
+.step-num {
+  width:26px; height:26px; border-radius:50%;
+  background:var(--card2); border:1px solid var(--border2);
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; flex-shrink:0; color:var(--text2);
+}
+.step-body { flex:1; min-width:0; }
+.step-title { font-size:13px; font-weight:600; margin-bottom:3px; }
+.step-desc { font-size:11px; color:var(--muted); line-height:1.5; }
+.step-chk {
+  width:20px; height:20px; border-radius:50%;
+  border:2px solid var(--border2); cursor:pointer; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; transition:all .15s; margin-top:3px;
+}
+.step-chk.done { background:var(--green); border-color:var(--green); color:#000; font-weight:700; }
+
+/* ── Patch checklist ── */
+.chk-item {
+  display:flex; align-items:flex-start; gap:12px;
+  padding:13px 0; border-bottom:1px solid var(--border);
+}
+.chk-item:last-child { border-bottom:none; }
+.chk-icon {
+  width:20px; height:20px; border-radius:50; flex-shrink:0; margin-top:1px;
+  display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;
+  border-radius:50%;
+}
+.ci-ok   { background:var(--green-bg); color:var(--green); }
+.ci-warn { background:var(--yellow-bg); color:var(--yellow); }
+.ci-fail { background:var(--red-bg); color:var(--red); }
+.ci-idle { background:var(--card2); color:var(--muted); border:1px solid var(--border); }
+.chk-body { flex:1; }
+.chk-title { font-size:13px; font-weight:500; margin-bottom:2px; }
+.chk-desc  { font-size:11px; color:var(--muted); line-height:1.5; }
+.chk-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.cat-label {
+  font-size:10px; color:var(--muted); font-weight:700;
+  text-transform:uppercase; letter-spacing:.07em;
+  padding:14px 0 4px;
+}
+
+/* ── Version table ── */
+.vtbl td:first-child { color:var(--muted); width:180px; font-size:12px; }
+.vtbl td { padding:10px 14px; border-bottom:1px solid var(--border); font-size:13px; }
+.vtbl tr:last-child td { border-bottom:none; }
+
+/* ── Divider ── */
+hr { border:none; border-top:1px solid var(--border); margin:20px 0; }
+
+/* ── Utilities ── */
+.row { display:flex; align-items:center; gap:8px; }
+.mt8 { margin-top:8px; }
+.mt14 { margin-top:14px; }
+.mt20 { margin-top:20px; }
+.col-g { color:var(--green); }
+.col-r { color:var(--red); }
+.col-y { color:var(--yellow); }
+.col-b { color:var(--blue); }
+.col-m { color:var(--muted); }
+.fw7 { font-weight:700; }
+.fz11 { font-size:11px; }
+
+/* ── Spinner ── */
+.spin {
+  display:inline-block; width:14px; height:14px;
+  border:2px solid var(--border); border-top-color:var(--green);
+  border-radius:50%; animation:rot .7s linear infinite;
+}
+@keyframes rot { to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════╗ -->
+<!-- ║           HEADER                 ║ -->
+<!-- ╚══════════════════════════════════╝ -->
+<header class="hd">
+  <div class="hd-left">
+    <div class="logo">OA</div>
+    <div>
+      <div class="hd-title">OAS Admin Dashboard</div>
+      <div class="hd-sub">Oracle Analytics Server 운영 도우미</div>
+    </div>
+  </div>
+  <div class="hd-right">
+    <div id="gPill" class="pill" style="background:var(--card);border:1px solid var(--border);">
+      <div class="dot dot-gray" id="gDot"></div>
+      <span id="gTxt" style="color:var(--muted);">연결 안됨</span>
+    </div>
+    <span class="ts" id="lastUpd">--</span>
+    <button class="btn btn-ghost" onclick="refreshAll()">↻ 새로고침</button>
+  </div>
+</header>
+
+<!-- ╔══════════════════════════════════╗ -->
+<!-- ║           CONFIG BAR             ║ -->
+<!-- ╚══════════════════════════════════╝ -->
+<div class="cfg">
+  <label>서버 URL</label>
+  <input class="inp-url" type="text" id="oasUrl" placeholder="http://host:7777">
+  <label>사용자</label>
+  <input style="width:90px;" type="text" id="oasUser" placeholder="ADMIN">
+  <label>비밀번호</label>
+  <input style="width:130px;" type="password" id="oasPass" placeholder="••••••">
+  <label title="비워두면 자동 탐지">API 경로 <span style="color:var(--muted);font-size:10px;">(선택)</span></label>
+  <input style="width:180px;" type="text" id="oasApiBase" placeholder="자동 탐지">
+  <button class="btn btn-primary" onclick="doConnect()">연결</button>
+  <button class="btn btn-ghost" onclick="loadDemo()">데모 보기</button>
+  <span id="cStat" class="cs col-m"></span>
+</div>
+
+<!-- ╔══════════════════════════════════╗ -->
+<!-- ║           TABS                   ║ -->
+<!-- ╚══════════════════════════════════╝ -->
+<nav class="tabs">
+  <div class="tab on"  onclick="goTab('health')">🏥 시스템 상태</div>
+  <div class="tab"     onclick="goTab('resource')">📊 리소스</div>
+  <div class="tab"     onclick="goTab('logs')">📋 로그 분석 <span class="tbadge" id="tbLog" style="display:none">0</span></div>
+  <div class="tab"     onclick="goTab('content')">📁 콘텐츠 인벤토리</div>
+  <div class="tab"     onclick="goTab('usage')">📊 사용량 분석 <span class="tbadge" id="tbUsage" style="display:none">0</span></div>
+  <div class="tab"     onclick="goTab('orphan')">🔍 소유자 없는 콘텐츠 <span class="tbadge" id="tbOrphan" style="display:none">0</span></div>
+  <div class="tab"     onclick="goTab('upgrade')">🔼 업그레이드 진단</div>
+  <div class="tab"     onclick="goTab('patch')">🔧 패치·업그레이드 점검</div>
+  <div class="tab"     onclick="goTab('runbook')">📖 Runbook</div>
+</nav>
+
+<!-- ╔══════════════════════════════════════════════════════════╗ -->
+<!-- ║  PANEL 1 – 시스템 상태                                    ║ -->
+<!-- ╚══════════════════════════════════════════════════════════╝ -->
+<main class="content">
+
+<div class="panel on" id="p-health">
+  <!-- 서비스 상태 4-cards -->
+  <div class="sec">
+    <div class="sec-hd">
+      <div><div class="sec-title">OAS 서비스 상태</div><div class="sec-desc">핵심 컴포넌트 실시간 상태</div></div>
+    </div>
+    <div class="g4">
+      <div class="card card-sm" id="card-oas">
+        <div class="ct">OAS 전체</div>
+        <div class="svc-row"><div class="svc-dot dot-gray" id="dot-oas"></div><div class="cv" id="v-oas" style="font-size:20px;">--</div></div>
+        <div class="cs2" id="s-oas">서버에 연결하세요</div>
+      </div>
+      <div class="card card-sm" id="card-wl">
+        <div class="ct">WebLogic Admin</div>
+        <div class="svc-row"><div class="svc-dot dot-gray" id="dot-wl"></div><div class="cv" id="v-wl" style="font-size:20px;">--</div></div>
+        <div class="cs2" id="s-wl">포트 7001</div>
+      </div>
+      <div class="card card-sm" id="card-bi">
+        <div class="ct">BI Server</div>
+        <div class="svc-row"><div class="svc-dot dot-gray" id="dot-bi"></div><div class="cv" id="v-bi" style="font-size:20px;">--</div></div>
+        <div class="cs2" id="s-bi">분석 엔진 (OBIS)</div>
+      </div>
+      <div class="card card-sm" id="card-ps">
+        <div class="ct">Presentation Services</div>
+        <div class="svc-row"><div class="svc-dot dot-gray" id="dot-ps"></div><div class="cv" id="v-ps" style="font-size:20px;">--</div></div>
+        <div class="cs2" id="s-ps">포트 9502 (OBIPS)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 버전 정보 -->
+  <div class="sec">
+    <div class="sec-hd"><div class="sec-title">버전 및 구성</div></div>
+    <div class="card">
+      <table class="tbl vtbl" id="verTbl">
+        <tbody><tr><td colspan="2" class="col-m" style="text-align:center;padding:24px;">연결 후 조회됩니다</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div><!-- /p-health -->
+
+
+<!-- ╔══════════════════════════════════════════════════════════╗ -->
+<!-- ║  PANEL 2 – 리소스 모니터                                  ║ -->
+<!-- ╚══════════════════════════════════════════════════════════╝ -->
+<div class="panel" id="p-resource">
+  <div class="sec">
+    <div class="sec-hd">
+      <div><div class="sec-title">서버 리소스</div><div class="sec-desc">CPU · Memory · Disk · Swap</div></div>
+      <div class="sec-actions">
+        <button class="btn btn-primary" onclick="loadResourceAPI()">실시간 갱신</button>
+        <button class="btn btn-ghost" onclick="loadResDemo()">데모 데이터</button>
+      </div>
+    </div>
+
+    <div id="resAlert" class="alert a-warn" style="display:none">⚠ 임계치 초과 리소스가 있습니다. 즉시 확인하세요.</div>
+
+    <div class="g2">
+      <!-- CPU -->
+      <div class="card">
+        <div class="ct">CPU 사용률</div>
+        <div class="row mt8">
+          <div class="cv" id="rcpu-v" style="font-size:30px;">--%</div>
+          <span class="badge b-gray" id="rcpu-b">대기</span>
+        </div>
+        <div class="pbar mt8"><div class="pfill pf-g" id="rcpu-bar" style="width:0"></div></div>
+        <div class="cs2 mt8">임계치 · 경고 70% / 위험 90%</div>
+      </div>
+      <!-- Memory -->
+      <div class="card">
+        <div class="ct">메모리 (RAM)</div>
+        <div class="row mt8">
+          <div class="cv" id="rmem-v" style="font-size:30px;">--%</div>
+          <span class="badge b-gray" id="rmem-b">대기</span>
+        </div>
+        <div class="pbar mt8"><div class="pfill pf-g" id="rmem-bar" style="width:0"></div></div>
+        <div class="row mt8" style="gap:16px;">
+          <span class="fz11 col-m">사용: <span id="rmem-used" class="col-g fw7">--</span></span>
+          <span class="fz11 col-m">여유: <span id="rmem-free" class="fw7">--</span></span>
+        </div>
+        <div class="cs2">임계치 · 경고 75% / 위험 90%</div>
+      </div>
+      <!-- Disk -->
+      <div class="card">
+        <div class="ct">디스크 사용률</div>
+        <div id="diskList" class="mt8">
+          <div class="col-m fz11" style="text-align:center;padding:20px;">데이터 로드 후 표시됩니다</div>
+        </div>
+        <div class="cs2 mt8">임계치 · 경고 80% / 위험 90%</div>
+      </div>
+      <!-- Swap -->
+      <div class="card">
+        <div class="ct">스왑 (Swap)</div>
+        <div class="row mt8">
+          <div class="cv" id="rswap-v" style="font-size:30px;">--%</div>
+          <span class="badge b-gray" id="rswap-b">대기</span>
+        </div>
+        <div class="pbar mt8"><div class="pfill pf-g" id="rswap-bar" style="width:0"></div></div>
+        <div class="cs2 mt8">스왑 급증 = 메모리 부족 신호</div>
+      </div>
+    </div>
+
+    <!-- JVM Heap -->
+    <div class="card mt20">
+      <div class="ct">JVM 힙 (WebLogic Managed Server)</div>
+      <div class="g3 mt8">
+        <div>
+          <div class="res-row"><span class="res-lbl">힙 사용량</span><span class="res-val" id="jvm-used">-- MB</span></div>
+          <div class="pbar"><div class="pfill pf-b" id="jvm-bar" style="width:0"></div></div>
+          <div class="fz11 col-m mt8" id="jvm-max">최대: --</div>
+        </div>
+        <div>
+          <div class="res-row"><span class="res-lbl">GC 횟수 (1h)</span><span class="res-val" id="jvm-gc">--</span></div>
+          <div class="res-row mt8"><span class="res-lbl">GC 소요 시간</span><span class="res-val" id="jvm-gct">-- ms</span></div>
+        </div>
+        <div>
+          <div class="res-row"><span class="res-lbl">활성 스레드</span><span class="res-val" id="jvm-th">--</span></div>
+          <div class="res-row mt8"><span class="res-lbl">데몬 스레드</span><span class="res-val" id="jvm-dm">--</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 수동 입력 -->
+    <div class="card mt20" style="border-color:var(--yellow-bd);">
+      <div class="ct" style="color:var(--yellow);">수동 입력 (서버 직접 조회 불가 시)</div>
+      <div class="g4 mt8">
+        <div>
+          <div class="fz11 col-m" style="margin-bottom:4px;">CPU %</div>
+          <input type="number" id="m-cpu" placeholder="예: 45" style="width:100%">
+        </div>
+        <div>
+          <div class="fz11 col-m" style="margin-bottom:4px;">메모리 %</div>
+          <input type="number" id="m-mem" placeholder="예: 62" style="width:100%">
+        </div>
+        <div>
+          <div class="fz11 col-m" style="margin-bottom:4px;">디스크 %</div>
+          <input type="number" id="m-disk" placeholder="예: 71" style="width:100%">
+        </div>
+        <div>
+          <div class="fz11 col-m" style="margin-bottom:4px;">Swap %</div>
+          <input type="number" id="m-swap" placeholder="예: 12" style="width:100%">
+        </div>
+      </div>
+      <button class="btn btn-ghost" style="margin-top:12px;" onclick="applyManual()">적용</button>
+    </div>
+  </div>
+</div><!-- /p-resource -->
+
+
+<!-- ╔══════════════════════════════════════════════════════════╗ -->
+<!-- ║  PANEL 3 – 로그 분석                                      ║ -->
+<!-- ╚══════════════════════════════════════════════════════════╝ -->
+<div class="panel" id="p-logs">
+  <div class="sec">
+    <div class="sec-hd">
+      <div><div class="sec-title">로그 분석</div><div class="sec-desc">ERROR · WARNING 집계 및 최근 로그 조회</div></div>
+      <div class="sec-actions">
+        <button class="btn btn-primary" onclick="loadLogsAPI()">로그 조회</button>
+        <button class="btn btn-ghost"   onclick="loadLogsDemo()">데모</button>
+      </div>
+    </div>
+
+    <!-- 로그 파일 상태 배너 -->
+    <div id="log-file-info" class="alert" style="display:none;margin-bottom:12px;font-size:12px;"></div>
+
+    <div class="g4" style="margin-bottom:20px;">
+      <div class="card card-sm">
+        <div class="ct">ERROR</div>
+        <div class="cv col-r" id="lcnt-e">--</div>
+        <div class="cs2">조회된 로그 기준</div>
+      </div>
+      <div class="card card-sm">
+        <div class="ct">WARNING</div>
+        <div class="cv col-y" id="lcnt-w">--</div>
+        <div class="cs2">조회된 로그 기준</div>
+      </div>
+      <div class="card card-sm">
+        <div class="ct">INFO/기타</div>
+        <div class="cv col-b" id="lcnt-i">--</div>
+        <div class="cs2">조회된 로그 기준</div>
+      </div>
+      <div class="card card-sm">
+        <div class="ct">마지막 ERROR</div>
+        <div class="cv" id="lcnt-last" style="font-size:16px;">--</div>
+        <div class="cs2" id="lcnt-last-t">--</div>
+      </div>
+    </div>
+
+    <!-- filters -->
+    <div class="card card-sm" style="margin-bottom:12px;">
+      <div class="row" style="flex-wrap:wrap;gap:8px;">
+        <select id="logFile">
+          <option value="obips">sawlog0.log (Presentation Services)</option>
+          <option value="nqserver">nqserver.log (BI Server)</option>
+          <option value="nqquery">nqquery.log (쿼리 로그)</option>
+          <option value="obisch">obisch1.log (스케줄러)</option>
+          <option value="domain">bi_server1.log (WebLogic)</option>
+          <option value="admin">AdminServer.log (관리 서버)</option>
+          <option value="ohs">error_log (OHS)</option>
+        </select>
+        <select id="logLines">
+          <option value="200">최근 200줄</option>
+          <option value="500" selected>최근 500줄</option>
+          <option value="1000">최근 1000줄</option>
+          <option value="3000">최근 3000줄</option>
+        </select>
+        <select id="logLevel" onchange="filterLogs()">
+          <option value="">전체 레벨</option>
+          <option value="ERROR">ERROR</option>
+          <option value="WARNING">WARNING</option>
+          <option value="INFO">INFO</option>
+          <option value="TRACE">TRACE</option>
+        </select>
+        <input type="text" id="logQ" placeholder="키워드 검색…" style="width:200px;" oninput="filterLogs()">
+      </div>
+    </div>
+
+    <div class="card" style="overflow:auto;">
+      <table class="tbl">
+        <thead><tr><th style="width:140px;">시간</th><th style="width:80px;">레벨</th><th style="width:110px;">소스</th><th>메시지</th></tr></thead>
+        <tbody id="logBody">
+          <tr><td colspan="4" class="col-m" style="text-align:center;padding:28px;">'로그 조회' 버튼을 누르세요</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div><!-- /p-logs -->
+
+
+<!-- ╔══════════════════════════════════════════════════════════╗ -->
+<!-- ║  PANEL 4 – 콘텐츠 인벤토리                                ║ -->
+<!-- ╚══════════════════════════════════════════════════════════╝ -->
+<div class="panel" id="p-content">
+  <div class="sec">
+    <div class="sec-hd">
+      <div><div class="sec-title">콘텐츠 인벤토리</div><div class="sec-desc">카탈로그 전체 현황 및 최근 변경 항목</div></div>
+      <div class="sec-actions"><button class="btn btn-ghost" onclick="loadContent()">갱신</button></div>
+    </div>
+
+    <div class="g4" style="margin-bottom:20px;">
+      <div class="card" style="border-top:3px solid var(--blue);">
+        <div class="ct">대시보드</div>
+        <div class="big-num" id="cnt-db">240</div>
+        <div class="big-lbl">Dashboard</div>
+      </div>
+      <div class="card" style="border-top:3px solid var(--green);">
+        <div class="ct">워크북</div>
+        <div class="big-num" id="cnt-wb">84</div>
+        <div class="big-lbl">Workbook</div>
+      </div>
+      <div class="card" style="border-top:3px solid var(--orange);">
+        <div class="ct">데이터셋</div>
+        <div class="big-num" id="cnt-ds">31</div>
+        <div class="big-lbl">Dataset</div>
+      </div>
+      <div class="card" style="border-top:3px solid var(--yellow);">
+        <div class="ct">최근 30일 변경</div>
+        <div class="big-num" id="cnt-rc">17</div>
+        <div class="big-lbl">항목</div>
+        <div class="big-sub">↑ 최근 변경됨</div>
+      </div>
+    </div>
+
+    <div class="sec-hd" style="margin-bottom:12px;">
+      <div class="sec-title" style="font-size:15px;">최근 변경 항목 (30일)</div>
+    </div>
+    <div class="card" style="overflow:auto;">
+      <table class="tbl">
+        <thead>
+          <tr><th>이름</th><th>유형</th><th>변경일</th><th>소유자</th><th>경로</th></tr>
+        </thead>
+        <tbody id="recentBody">
+          <tr><td colspan="5" class="col-m" style="text-align:center;padding:24px;">갱신 버튼을 누르세요</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div><!-- /p-content -->
+
+
+<!-- ╔══════════════════════════════════════════════════════════╗ -->
+<!-- ║  PANEL 5 – 사용량 분석 (Usage Tracking)                  ║ -->
+<!-- ╚══════════════════════════════════════════════════════════╝ -->
+<div class="panel" id="p-usage">
+  <div class="sec">
+    <div class="sec-hd">
+      <div>
+        <div class="sec-title">사용량 분석</div>
+        <div class="sec-desc">OAS Usage Tracking DB 기반 · 리포트 활용도 · 미사용 콘텐츠 감지</div>
+      </div>
+      <div class="sec-actions" style="align-items:center;gap:8px;">
+        <select id="usagePeriod" style="height:32px;">
+          <option value="30">최근 30일</option>
+          <option value="90" selected>최근 90일</option>
+          <option value="180">최근 180일</option>
+          <option value="365">최근 365일</option>
+        </select>
+        <button class="btn btn-primary" onclick="loadUsage()">조회</button>
+      </div>
+    </div>
+
+    <!-- 미설정 안내 -->
+    <div id="usage-setup-banner" class="alert a-warn" style="display:none;margin-bottom:16px;">
+      <div>
+        <strong>⚙ Usage Tracking DB 미설정</strong>
+        <div class="fz11" id="usage-setup-hint" style="margin-top:4px;"></div>
+        <div class="fz11" style="margin-top:6px;opacity:.8;">
+          OAS Usage Tracking 활성화: <code>NQSConfig.INI</code> → <code>[USAGE_TRACKING] ENABLE = YES</code><br>
+          metrics_server.py 환경변수: <code>OAS_UT_USER</code> · <code>OAS_UT_PASS</code> · <code>OAS_UT_DSN</code>
+        </div>
+      </div>
+    </div>
+    <div id="usage-err-banner" class="alert a-error" style="display:none;margin-bottom:16px;"></div>
+
+    <!-- 요약 카드 -->
+    <div class="g4" style="margin-bottom:20px;">
+      <div class="card card-sm">
+        <div class="ct">총 쿼리 수</div>
+        <div class="big-num" id="us-total">--</div>
+        <div class="cs2" id="us-period-lbl">기간 내</div>
+      </div>
+      <div class="card card-sm" style="border-top:3px solid var(--red)">
+        <div class="ct">오류율</div>
+        <div class="big-num col-r" id="us-errrate">--</div>
+        <div class="cs2" id="us-errcnt">오류 건수 --</div>
+      </div>
+      <div class="card card-sm">
+        <div class="ct">활성 사용자</div>
+        <div class="big-num" id="us-users">--</div>
+        <div class="cs2">고유 사용자 수</div>
+      </div>
+      <div class="card card-sm">
+        <div class="ct">평균 응답시간</div>
+        <div class="big-num" id="us-avgsec">--</div>
+        <div class="cs2">초 (전체 쿼리 기준)</div>
+      </div>
+    </div>
+
+    <!-- 일별 추이 미니 차트 -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="ct" style="margin-bottom:8px;">일별 쿼리 추이 <span class="col-m fz11">(최근 30일)</span></div>
+      <div id="us-trend-chart" style="display:flex;align-items:flex-end;gap:3px;height:60px;overflow:hidden;">
+        <span class="col-m fz11">조회 후 표시됩니다</span>
+      </div>
+      <div id="us-trend-labels" style="display:flex;gap:3px;margin-top:2px;overflow:hidden;"></div>
+    </div>
+
+    <div class="g2" style="gap:16px;">
+      <!-- 많이 사용된 리포트 -->
+      <div>
+        <div class="ct" style="margin-bottom:8px;">많이 사용된 리포트 <span class="col-m fz11">(상위 20)</span></div>
+        <div style="overflow:auto;">
+          <table class="tbl">
+            <thead><tr>
+              <th>리포트 경로</th>
+              <th style="width:70px;text-align:right;">조회수</th>
+              <th style="width:70px;text-align:right;">사용자</th>
+              <th style="width:75px;text-align:right;">평균(초)</th>
+              <th style="width:110px;">마지막 사용</th>
+            </tr></thead>
+            <tbody id="us-top-body">
+              <tr><td colspan="5" class="col-m" style="text-align:center;padding:20px;">조회 후 표시됩니다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 느린 리포트 -->
+      <div>
+        <div class="ct" style="margin-bottom:8px;">느린 리포트 <span class="col-m fz11">(평균 응답시간 상위)</span></div>
+        <div style="overflow:auto;">
+          <table class="tbl">
+            <thead><tr>
+              <th>리포트 경로</th>
+              <th style="width:75px;text-align:right;">평균(초)</th>
+              <th style="width:75px;text-align:right;">최대(초)</th>
+              <th style="width:60px;text-align:right;">조회수</th>
+            </tr></thead>
+            <tbody id="us-slow-body">
+              <tr><td colspan="4" class="col-m" style="text-align:center;padding:20px;">조회 후 표시됩니다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 상위 사용자 + Subject Area -->
+    <div class="g2" style="gap:16px;margin-top:16px;">
+      <div>
+        <div class="ct" style="margin-bottom:8px;">상위 사용자</div>
+        <div style="overflow:auto;">
+          <table class="tbl">
+            <thead><tr>
+              <th>사용자</th>
+              <th style="width:70px;text-align:right;">조회수</th>
+              <th style="width:70px;text-align:right;">리포트 수</th>
+              <th style="width:75px;text-align:right;">평균(초)</th>
+            </tr></thead>
+            <tbody id="us-user-body">
+              <tr><td colspan="4" class="col-m" style="text-align:center;padding:20px;">조회 후 표시됩니다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <div class="ct" style="margin-bottom:8px;">주제 영역(Subject Area)별 사용 현황</div>
+        <div style="overflow:auto;">
+          <table class="tbl">
+            <thead><tr>
+              <th>주제 영역</th>
+              <th style="width:70px;text-align:right;">조회수</th>
+              <th style="width:60px;text-align:right;">사용자</th>
+              <th style="width:75px;text-align:right;">평균(초)</th>
+            </tr></thead>
+            <tbody id="us-sa-body">
+              <tr><td colspan="4" class="col-m" style="text-align:center;padding:20px;">조회 후 표시됩니다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 미사용 콘텐츠 감지 -->
+    <div class="card" style="margin-top:16px;">
+      <div class="sec-hd" style="margin-bottom:12px;">
+        <div>
+          <div class="ct">미사용 콘텐츠 감지</div>
+          <div class="fz11 col-m">카탈로그 항목 중 선택 기간 내 Usage Tracking에 없는 항목</div>
+        </div>
+        <button class="btn btn-ghost" onclick="detectUnusedContent()">감지 실행</button>
+      </div>
+      <div id="us-unused-result" class="col-m fz11" style="text-align:center;padding:16px;">
+        '감지 실행' 버튼을 누르세요 (카탈로그 API + Usage Tracking 교차 분석)
+      </div>
+    </div>
+  </div>
+</div><!-- /p-usage -->
+
+<!-- ╔══════════════════════════════════════════════════════════╗ -->
+<!-- ║  PANEL 6 – 소유자 없는 콘텐츠                             ║ -->
+<!-- ╚══════════════════════════════════════════════════════════╝ -->
+<div class="panel" id="p-orphan">
+  <div class="sec">
+    <div class="sec-hd">
+      <div><div class="sec-title">소유자 없는 콘텐츠</div><div class="sec-desc">퇴사·삭제된 계정 소유 콘텐츠 탐지 및 조치</div></div>
+      <div class="sec-actions"><button class="btn btn-ghost" onclick="scanOrphansDemo()">탐지 실행</button></div>
+    </div>
+
+    <div class="g3" style="margin-bottom:20px;">
+      <div class="card card-sm">
+        <div class="ct">탐지된 항목</div>
+        <div class="cv col-y" id="o-total">--</div>
+        <div class="cs2">소유자 없는 콘텐츠</div>
+      </div>
+      <div class="card card-sm">
+        <div class="ct">비활성 계정 수</div>
+        <div class="cv" id="o-acct">--</div>
+        <div class="cs2">시스템에 없는 소유자</div>
+      </div>
+      <div class="card card-sm">
+        <div class="ct">즉시 조치 권고</div>
+        <div class="cv col-r" id="o-urgent">--</div>
+        <div class="cs2">소유권 이전 또는 삭제</div>
+      </div>
+    </div>
+
+    <div class="card card-sm" style="margin-bottom:12px;">
+      <div class="row" style="gap:8px;flex-wrap:wrap;">
+        <input type="text" id="oQ" placeholder="이름 또는 소유자 검색…" style="width:240px;" oninput="filterOrphans()">
+        <select id="oType" onchange="filterOrphans()">
+          <option value="">전체 유형</option>
+          <option value="대시보드">대시보드</option>
+          <option value="워크북">워크북</option>
+          <option value="데이터셋">데이터셋</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card" style="overflow:auto;">
+      <table class="tbl">
+        <thead>
+          <tr><th>콘텐츠 이름</th><th>유형</th><th>마지막 소유자</th><th>수정일</th><th>경로</th><th>권고 조치</th></tr>
+        </thead>
+        <tbody id="orphanBody">
+          <tr><td colspan="6" class="col-m" style="text-align:center;padding:28px;">'탐지 실행'을 눌러 스캔하세요</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div><!-- /p-orphan -->
+
+
+<!-- ╔══════════════════════════════════════════════════════════╗ -->
+<!-- ║  PANEL 6 – 업그레이드 진단                                ║ -->
+<!-- ╚══════════════════════════════════════════════════════════╝ -->
+<div class="panel" id="p-upgrade">
+
+  <!-- 헤더 -->
+  <div class="sec">
+    <div class="sec-hd">
+      <div>
+        <div class="sec-title">업그레이드 사전 진단</div>
+        <div class="sec-desc">OAS/OBIEE → OAS 2026 업그레이드에 필요한 환경 정보 수집 및 주의사항 확인</div>
+      </div>
+      <div class="sec-actions">
+        <button class="btn btn-primary" onclick="collectUpgradeInfo()">API 정보 수집</button>
+        <button class="btn btn-ghost"   onclick="exportUpgradeReport()">📥 보고서 내보내기</button>
+      </div>
+    </div>
+
+    <!-- 서버 감지 버전 배너 -->
+    <div id="upg-ver-banner" class="alert a-ok" style="display:none;margin-bottom:12px;">
+      서버 자동 감지 버전: <strong id="upg-ver-str">--</strong>
+      <span id="upg-ver-src" class="fz11" style="margin-left:8px;opacity:.7;"></span>
+    </div>
+    <div id="upg-ver-err" class="alert a-warn" style="display:none;margin-bottom:12px;">
+      ⚠ 버전 자동 감지 실패 — 수동으로 선택하세요.
+      <span id="upg-ver-err-msg" class="fz11" style="margin-left:6px;opacity:.8;"></span>
+    </div>
+
+    <!-- 수동 입력 -->
+    <div class="card">
+      <div class="ct">현재 환경</div>
+      <div class="g4 mt8">
+        <div>
+          <div class="fz11 col-m" style="margin-bottom:4px;">현재 버전 <span class="col-r">*</span></div>
+          <select id="upg-fromver" style="width:100%" onchange="updateUpgradeNotes()">
+            <option value="">-- 선택 --</option>
+            <option value="obiee11">OBIEE 11.1.1.x</option>
+            <option value="obiee12">OBIEE 12.2.1.x</option>
+            <option value="oas5">OAS 5.x</option>
+            <option value="oas6">OAS 6.x</option>
+            <option value="oas7">OAS 7.x</option>
+          </select>
+        </div>
+        <div>
+          <div class="fz11 col-m" style="margin-bottom:4px;">OS</div>
+          <select id="upg-os" style="width:100%">
+            <option value="">-- 선택 --</option>
+            <option value="ol8">Oracle Linux 8</option>
+            <option value="ol9">Oracle Linux 9</option>
+            <option value="rhel8">RHEL 8</option>
+            <option value="rhel9">RHEL 9</option>
+          </select>
+        </div>
+        <div>
+          <div class="fz11 col-m" style="margin-bottom:4px;">JDK 버전</div>
+          <input type="text" id="upg-jdk" placeholder="예: 17.0.8" style="width:100%">
+        </div>
+        <div>
+          <div class="fz11 col-m" style="margin-bottom:4px;">DB 유형</div>
+          <select id="upg-db" style="width:100%">
+            <option value="">-- 선택 --</option>
+            <option value="oracle19">Oracle DB 19c</option>
+            <option value="oracle21">Oracle DB 21c</option>
+            <option value="oracle23">Oracle DB 23c</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2 mt14">
+        <div>
+          <div class="fz11 col-m" style="margin-bottom:4px;">ORACLE_HOME 경로</div>
+          <input type="text" id="upg-ohome" placeholder="/u01/oracle/products/OAS2026" style="width:100%">
+        </div>
+        <div>
+          <div class="fz11 col-m" style="margin-bottom:4px;">DOMAIN_HOME 경로</div>
+          <input type="text" id="upg-dhome" placeholder="/u01/oracle/config/domains/bi" style="width:100%">
+        </div>
+      </div>
+      <div class="g4 mt14">
+        <div>
+          <div class="fz11 col-m" style="margin-bottom:4px;">인증 방식</div>
+          <select id="upg-auth" style="width:100%" onchange="updateUpgradeNotes()">
+            <option value="db">DB 인증</option>
+            <option value="ldap">LDAP / Active Directory</option>
+            <option value="oid">Oracle OID</option>
+            <option value="idcs">OCI IAM / IDCS</option>
+            <option value="krb">Kerberos</option>
+          </select>
+        </div>
+        <div>
+          <div class="fz11 col-m" style="margin-bottom:4px;">커스텀 스킨</div>
+          <select id="upg-skin" style="width:100%" onchange="updateUpgradeNotes()">
+            <option value="no">없음</option>
+            <option value="yes">있음</option>
+          </select>
+        </div>
+        <div>
+          <div class="fz11 col-m" style="margin-bottom:4px;">Writeback 사용</div>
+          <select id="upg-wb" style="width:100%" onchange="updateUpgradeNotes()">
+            <option value="no">없음</option>
+            <option value="yes">있음</option>
+          </select>
+        </div>
+        <div>
+          <div class="fz11 col-m" style="margin-bottom:4px;">SSO 연동</div>
+          <select id="upg-sso" style="width:100%" onchange="updateUpgradeNotes()">
+            <option value="no">없음</option>
+            <option value="yes">있음</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 카탈로그 현황 -->
+  <div class="sec">
+    <div class="sec-hd">
+      <div><div class="sec-title" style="font-size:15px;">카탈로그 현황</div><div class="sec-desc">GET /catalog/{type} — API 자동 수집</div></div>
+    </div>
+    <div id="upg-catalog-grid" class="g4">
+      <div class="card card-sm" style="grid-column:1/-1;text-align:center;padding:24px;color:var(--muted);">'API 정보 수집' 버튼을 누르세요</div>
+    </div>
+  </div>
+
+  <!-- 시스템 설정 -->
+  <div class="sec">
+    <div class="sec-hd">
+      <div><div class="sec-title" style="font-size:15px;">시스템 설정</div><div class="sec-desc">GET /system/settings — API 자동 수집</div></div>
+    </div>
+    <div class="card" style="overflow:auto;">
+      <table class="tbl">
+        <thead><tr><th>설정 항목</th><th>현재 값</th></tr></thead>
+        <tbody id="upg-settings-body">
+          <tr><td colspan="2" class="col-m" style="text-align:center;padding:20px;">'API 정보 수집' 후 표시됩니다</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 안전 도메인 -->
+  <div class="sec">
+    <div class="sec-hd">
+      <div><div class="sec-title" style="font-size:15px;">안전 도메인</div><div class="sec-desc">GET /system/safeDomains — 임베딩 허용 도메인 목록</div></div>
+    </div>
+    <div class="card" style="overflow:auto;">
+      <table class="tbl">
+        <thead><tr><th>도메인</th><th style="width:120px;">유형</th></tr></thead>
+        <tbody id="upg-domains-body">
+          <tr><td colspan="2" class="col-m" style="text-align:center;padding:20px;">'API 정보 수집' 후 표시됩니다</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 업그레이드 주의사항 -->
+  <div class="sec" id="upg-notes-sec" style="display:none">
+    <div class="sec-hd">
+      <div><div class="sec-title" style="font-size:15px;">업그레이드 주의사항</div><div class="sec-desc">선택한 현재 버전 기준 자동 생성</div></div>
+    </div>
+    <div id="upg-notes-body"></div>
+  </div>
+
+</div><!-- /p-upgrade -->
+
+
+<!-- ╔══════════════════════════════════════════════════════════╗ -->
+<!-- ║  PANEL 7 – 패치·업그레이드 점검                           ║ -->
+<!-- ╚══════════════════════════════════════════════════════════╝ -->
+<div class="panel" id="p-patch">
+
+  <!-- 스냅샷 백업 -->
+  <div class="sec">
+    <div class="sec-hd">
+      <div><div class="sec-title">스냅샷 백업</div><div class="sec-desc">패치 전 환경 전체 백업 — metrics_server.py 경유</div></div>
+      <div class="sec-actions">
+        <button class="btn btn-primary" id="snapBtn" onclick="createSnapshot()">스냅샷 생성</button>
+        <button class="btn btn-ghost" onclick="loadSnapshots()">목록 새로고침</button>
+      </div>
+    </div>
+
+    <div id="snapAlert" class="alert" style="display:none;margin-bottom:12px;"></div>
+
+    <div class="g3" style="margin-bottom:16px;">
+      <div class="card card-sm">
+        <div class="ct">저장된 스냅샷</div>
+        <div class="cv" id="snap-count">--</div>
+        <div class="cs2" id="snap-dir">백업 디렉터리</div>
+      </div>
+      <div class="card card-sm">
+        <div class="ct">최근 백업</div>
+        <div class="cv" id="snap-last" style="font-size:15px;">--</div>
+        <div class="cs2" id="snap-last-size">--</div>
+      </div>
+      <div class="card card-sm">
+        <div class="ct">실행 상태</div>
+        <div class="cv" id="snap-running" style="font-size:18px;">대기</div>
+        <div class="cs2" id="snap-last-result">--</div>
+      </div>
+    </div>
+
+    <div class="card" style="overflow:auto;">
+      <table class="tbl">
+        <thead><tr><th>파일명</th><th style="width:100px;text-align:right;">크기</th><th style="width:160px;">생성일시</th></tr></thead>
+        <tbody id="snapBody">
+          <tr><td colspan="3" class="col-m" style="text-align:center;padding:20px;">'목록 새로고침' 또는 연결 후 자동 로드</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-hd">
+      <div><div class="sec-title">패치·업그레이드 사전 점검</div><div class="sec-desc">Oracle 라이프사이클 가이드 기반 — 항목별 완료 체크</div></div>
+      <div class="sec-actions">
+        <button class="btn btn-ghost" onclick="exportChecklist()">📥 내보내기</button>
+        <button class="btn btn-ghost" onclick="autoCheck()">자동 점검</button>
+      </div>
+    </div>
+
+    <div class="g3" style="margin-bottom:20px;">
+      <div class="card card-sm">
+        <div class="ct">통과</div><div class="cv col-g" id="pc-ok">0</div>
+      </div>
+      <div class="card card-sm">
+        <div class="ct">주의</div><div class="cv col-y" id="pc-warn">0</div>
+      </div>
+      <div class="card card-sm">
+        <div class="ct">미완료·실패</div><div class="cv col-r" id="pc-fail">0</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="patchList"><!-- JS로 렌더링 --></div>
+    </div>
+  </div><!-- /점검 sec -->
+</div><!-- /p-patch -->
+
+
+<!-- ╔══════════════════════════════════════════════════════════╗ -->
+<!-- ║  PANEL 7 – Runbook                                       ║ -->
+<!-- ╚══════════════════════════════════════════════════════════╝ -->
+<div class="panel" id="p-runbook">
+  <div class="sec">
+    <div class="sec-hd">
+      <div><div class="sec-title">Runbook</div><div class="sec-desc">OAS 운영 표준 절차 — 체크박스로 진행 추적</div></div>
+      <div class="sec-actions">
+        <select id="rbSel" onchange="switchRb()" style="min-width:160px;">
+          <option value="startup">🟢 서비스 기동</option>
+          <option value="shutdown">🔴 서비스 종료</option>
+          <option value="backup">💾 백업</option>
+          <option value="restore">🔄 복구</option>
+          <option value="migration">🚚 환경 이전</option>
+          <option value="health">📋 정기 점검</option>
+        </select>
+        <button class="btn btn-ghost" onclick="resetRb()">체크 초기화</button>
+      </div>
+    </div>
+    <div id="rbContent" class="card"></div>
+  </div>
+</div><!-- /p-runbook -->
+
+</main><!-- /content -->
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                                   -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<script>
+// ── state ──────────────────────────────────────────────
+const S = { url:'', apiBase:'', connected:false, isDemo:false, user:'', pass:'' };
+
+// 자동 탐지 후보 경로 (OAS 버전/설치 방식에 따라 다름)
+const API_CANDIDATES = [
+  '/api/20210901',
+  '/dv/ui/api/20210901',
+  '/dv/api/20210901',
+  '/analytics/api/20210901',
+  '/bi/api/20210901',
+];
+let allOrphans=[], patchState={};
+
+// ── tab routing ────────────────────────────────────────
+const TABS = ['health','resource','logs','content','usage','orphan','upgrade','patch','runbook'];
+function goTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on', TABS[i]===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById('p-'+name).classList.add('on');
+  if(name === 'upgrade') detectServerVersion();
+  if(name === 'logs'   && S.connected && !S.isDemo) loadLogsAPI();
+  if(name === 'usage'  && S.connected && !S.isDemo) loadUsage();
+}
+
+// ── global status ──────────────────────────────────────
+function setGlobal(text, color){
+  const colors={green:'var(--green)',red:'var(--red)',yellow:'var(--yellow)',gray:'var(--muted)'};
+  const bgs   ={green:'var(--green-bg)',red:'var(--red-bg)',yellow:'var(--yellow-bg)',gray:'var(--card)'};
+  const bds   ={green:'var(--green-bd)',red:'var(--red-bd)',yellow:'var(--yellow-bd)',gray:'var(--border)'};
+  const pill=document.getElementById('gPill');
+  const dot =document.getElementById('gDot');
+  const txt =document.getElementById('gTxt');
+  pill.style.background=bgs[color]; pill.style.border='1px solid '+bds[color];
+  dot.style.background=colors[color]; dot.style.boxShadow=color==='green'?'0 0 6px var(--green)':'none';
+  txt.style.color=colors[color]; txt.textContent=text;
+}
+function stamp(){ document.getElementById('lastUpd').textContent='업데이트: '+new Date().toLocaleTimeString('ko-KR'); }
+function cStat(msg,cls){ const el=document.getElementById('cStat'); el.textContent=msg; el.className='cs '+cls; }
+
+// ── connection ─────────────────────────────────────────
+async function doConnect(){
+  const url        = (document.getElementById('oasUrl').value.trim().replace(/\/$/,'')) || window.location.origin;
+  const manualBase = document.getElementById('oasApiBase').value.trim().replace(/\/$/,'');
+  S.url    = url;
+  S.user   = document.getElementById('oasUser').value.trim();
+  S.pass   = document.getElementById('oasPass').value;
+  S.isDemo = false;
+  document.getElementById('oasUrl').value = url;
+
+  if(!S.user || !S.pass){
+    cStat('사용자명과 비밀번호를 입력하세요.', 'col-y');
+    return;
+  }
+
+  const authHeader = { 'Authorization': 'Basic ' + btoa(S.user + ':' + S.pass) };
+  const candidates = manualBase ? [manualBase] : API_CANDIDATES;
+  cStat('연결 중…', 'col-m');
+
+  for(const base of candidates){
+    cStat('탐색 중… ' + base, 'col-m');
+    try {
+      const r = await fetch(url + base + '/catalog', { headers: authHeader, credentials:'omit' });
+
+      if(r.ok){
+        S.apiBase = base;
+        document.getElementById('oasApiBase').value = base;
+        S.connected = true;
+        cStat('✓ 연결 성공  [' + base + ']', 'col-g');
+        setGlobal('정상', 'green');
+        stamp();
+        clearHealthFields();
+        loadHealthAPI();
+        return;
+      }
+      if(r.status === 401){
+        S.apiBase = base;
+        document.getElementById('oasApiBase').value = base;
+        cStat('인증 실패 (401) — 사용자명/비밀번호를 확인하세요  [' + base + ']', 'col-r');
+        return;
+      }
+      if(r.status === 403){
+        S.apiBase = base;
+        document.getElementById('oasApiBase').value = base;
+        cStat('접근 권한 없음 (403) — 계정 권한을 확인하세요  [' + base + ']', 'col-r');
+        return;
+      }
+      // 404 등 → 다음 후보
+    } catch(_){ /* 네트워크 오류 → 다음 후보 */ }
+  }
+
+  cStat('API 경로를 찾지 못했습니다. 서버 URL과 포트를 확인하세요.', 'col-r');
+}
+
+// 실서버 연결 시 데모 잔여값 전체 초기화
+function clearHealthFields(){
+  ['oas','wl','bi','ps'].forEach(k=>setSvc(k,'확인 중…','gray',''));
+  setVerTable([['','조회 중…']]);
+}
+
+// ── demo entry point ───────────────────────────────────
+function loadDemo(){
+  S.connected=true; S.isDemo=true;
+  setGlobal('데모 모드','yellow');
+  stamp();
+  cStat('데모 모드','col-y');
+  setSvc('oas','정상','green','데모 모드');
+  setSvc('wl','정상','green','포트 7001');
+  setSvc('bi','정상','green','OBIS 실행 중');
+  setSvc('ps','정상','green','포트 9502');
+  setVerTable([
+    ['OAS 버전','7.6.0.0.0 (데모)'],['WebLogic','14.1.1.0'],
+    ['JDK','17.0.8'],['운영 모드','Production'],
+    ['도메인 홈','/u01/oracle/config/domains/bi'],
+    ['포트','9502 (HTTP) / 9503 (HTTPS)'],
+  ]);
+  loadResDemo();
+  loadLogsDemo();
+  loadContentDemo();
+}
+
+function refreshAll(){
+  if(!S.connected){ cStat('먼저 연결하세요','col-y'); return; }
+  if(S.isDemo){ loadDemo(); stamp(); return; }
+  clearHealthFields();
+  loadHealthAPI();
+  stamp();
+}
+
+// ── health ─────────────────────────────────────────────
+async function loadHealthAPI(){
+  // /catalog 200 응답 = bi_server1(WebLogic) + OBIPS(PS) + OBIS(BI) 모두 구동 중
+  // 서비스 상태는 카탈로그 연결 성공 기준으로 확정; /system은 버전 정보 보강용만 사용
+  setSvc('oas','정상','green','REST API 200 응답');
+  setSvc('wl', '정상','green','bi_server1 Managed Server 구동');
+  setSvc('bi', '정상','green','BI Server (OBIS) 카탈로그 정상');
+  setSvc('ps', '정상','green','Presentation Services (OBIPS)');
+
+  const verRows = [
+    ['연결 URL',      S.url],
+    ['API 계정',      S.user],
+    ['API 기반 경로', S.apiBase],
+  ];
+
+  // API 루트 — 사용 가능한 엔드포인트 목록 및 버전 힌트
+  try {
+    const root = await fetchOAS('');
+    const apiVer = root.version || root.apiVersion || root.productVersion;
+    if(apiVer) verRows.push(['API 버전', apiVer]);
+    const epCount = root.items?.length || root.links?.length;
+    if(epCount) verRows.push(['지원 엔드포인트', epCount + '개']);
+  } catch(_){}
+
+  // /system — OAS 버전·호스트 정보 (OAS 버전에 따라 없을 수 있음, 404 시 조용히 무시)
+  try {
+    const sys = await fetchOAS('/system');
+    if(sys.version || sys.productVersion)
+      verRows.push(['OAS 버전',  sys.version || sys.productVersion]);
+    if(sys.hostName)  verRows.push(['호스트명',   sys.hostName]);
+    if(sys.port)      verRows.push(['포트',        String(sys.port)]);
+    if(sys.mode)      verRows.push(['운영 모드',   sys.mode]);
+  } catch(err){
+    if(err.message === '403')
+      verRows.push(['시스템 상세', '권한 부족 — BI Service Administrator 역할 필요']);
+    // 404 = 이 OAS 버전에서 /system 미지원 → 행 숨김
+  }
+
+  // /catalog — 총 항목 수
+  try {
+    const cat = await fetchOAS('/catalog');
+    const total = cat.totalResults ?? cat.count ?? cat.items?.length;
+    if(total !== undefined) verRows.push(['카탈로그 항목', total + '개']);
+  } catch(_){}
+
+  setVerTable(verRows);
+
+}
+
+function setSvc(key,text,color,sub){
+  const c={green:'var(--green)',red:'var(--red)',yellow:'var(--yellow)'};
+  document.getElementById('dot-'+key).style.background=c[color]||'var(--muted)';
+  document.getElementById('v-'+key).textContent=text;
+  document.getElementById('v-'+key).style.color=c[color]||'';
+  if(sub) document.getElementById('s-'+key).textContent=sub;
+}
+
+function setVerTable(rows){
+  document.getElementById('verTbl').innerHTML='<tbody>'+
+    rows.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('')+'</tbody>';
+}
+
+async function fetchOAS(path){
+  const headers = {};
+  if(S.user && S.pass){
+    headers['Authorization'] = 'Basic ' + btoa(S.user + ':' + S.pass);
+  }
+  const r = await fetch(S.url + S.apiBase + path, { headers, credentials:'omit' });
+  if(!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+// ── resources ──────────────────────────────────────────
+function fmtBytes(b){
+  if(!b) return '--';
+  const gb = b / 1073741824;
+  return gb >= 1 ? gb.toFixed(1) + ' GB' : (b / 1048576).toFixed(0) + ' MB';
+}
+
+async function loadResourceAPI(){
+  const metricsUrl = mgmtUrl('/metrics');
+  try {
+    const r = await fetch(metricsUrl, { credentials:'omit' });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+
+    // CPU
+    if(d.cpu?.percent !== undefined) applyRes('rcpu', Math.round(d.cpu.percent));
+
+    // Memory
+    if(d.memory){
+      applyRes('rmem', Math.round(d.memory.percent));
+      document.getElementById('rmem-used').textContent = fmtBytes(d.memory.used);
+      document.getElementById('rmem-free').textContent = fmtBytes(d.memory.free);
+    }
+
+    // Swap
+    if(d.swap?.percent !== undefined) applyRes('rswap', Math.round(d.swap.percent));
+
+    // Disk
+    if(d.disks?.length){
+      document.getElementById('diskList').innerHTML = d.disks.map(dk => {
+        const p = Math.round(dk.percent);
+        const cls = p>=90?'pf-r':p>=80?'pf-y':'pf-g';
+        const vc  = p>=90?'col-r':p>=80?'col-y':'';
+        return `<div class="res-row" style="margin-top:8px;">
+          <span class="res-lbl">${dk.mount} <span class="fz11 col-m">(${fmtBytes(dk.total)})</span></span>
+          <span class="res-val ${vc}">${p}%</span>
+        </div>
+        <div class="pbar"><div class="pfill ${cls}" style="width:${p}%"></div></div>`;
+      }).join('');
+    }
+
+    // 임계치 경고
+    const bad = (d.cpu?.percent >= 70) || (d.memory?.percent >= 75) ||
+                (d.swap?.percent >= 50) || d.disks?.some(dk => dk.percent >= 80);
+    document.getElementById('resAlert').style.display = bad ? 'flex' : 'none';
+
+  } catch(err){
+    cStat('메트릭 서버 연결 실패: ' + err.message + ' — metrics_server.py 실행 및 OHS 프록시 설정 확인', 'col-r');
+  }
+}
+
+function loadResDemo(){
+  applyRes('rcpu', 45); applyRes('rmem', 62); applyRes('rswap', 8);
+  document.getElementById('rmem-used').textContent='49.6 GB';
+  document.getElementById('rmem-free').textContent='30.4 GB';
+  const disks=[
+    {mount:'/',pct:71,total:'500 GB'},
+    {mount:'/u01/oracle',pct:58,total:'1 TB'},
+    {mount:'/backup',pct:34,total:'2 TB'},
+  ];
+  document.getElementById('diskList').innerHTML=disks.map(d=>{
+    const cls=d.pct>=90?'pf-r':d.pct>=80?'pf-y':'pf-g';
+    const vc =d.pct>=90?'col-r':d.pct>=80?'col-y':'';
+    return `<div class="res-row" style="margin-top:8px;"><span class="res-lbl">${d.mount} <span class="fz11 col-m">(${d.total})</span></span><span class="res-val ${vc}">${d.pct}%</span></div><div class="pbar"><div class="pfill ${cls}" style="width:${d.pct}%"></div></div>`;
+  }).join('');
+  document.getElementById('jvm-used').textContent='4,200 MB';
+  document.getElementById('jvm-max').textContent='최대: 8,192 MB';
+  document.getElementById('jvm-bar').style.width='51%';
+  document.getElementById('jvm-gc').textContent='12';
+  document.getElementById('jvm-gct').textContent='840 ms';
+  document.getElementById('jvm-th').textContent='124';
+  document.getElementById('jvm-dm').textContent='98';
+}
+
+function applyRes(key, pct){
+  const cls=pct>=90?'pf-r':pct>=75?'pf-y':'pf-g';
+  const bcls=pct>=90?'b-red':pct>=75?'b-yellow':'b-green';
+  const btxt=pct>=90?'위험':pct>=75?'주의':'정상';
+  document.getElementById(key+'-v').textContent=pct+'%';
+  document.getElementById(key+'-bar').className='pfill '+cls;
+  document.getElementById(key+'-bar').style.width=pct+'%';
+  document.getElementById(key+'-b').className='badge '+bcls;
+  document.getElementById(key+'-b').textContent=btxt;
+}
+
+function applyManual(){
+  const cpu=+document.getElementById('m-cpu').value;
+  const mem=+document.getElementById('m-mem').value;
+  const disk=+document.getElementById('m-disk').value;
+  const swap=+document.getElementById('m-swap').value;
+  if(cpu)  applyRes('rcpu',cpu);
+  if(mem)  applyRes('rmem',mem);
+  if(swap) applyRes('rswap',swap);
+  if(disk){
+    const cls=disk>=90?'pf-r':disk>=80?'pf-y':'pf-g';
+    const vc=disk>=90?'col-r':disk>=80?'col-y':'';
+    document.getElementById('diskList').innerHTML=
+      `<div class="res-row mt8"><span class="res-lbl">전체 (수동입력)</span><span class="res-val ${vc}">${disk}%</span></div><div class="pbar"><div class="pfill ${cls}" style="width:${disk}%"></div></div>`;
+  }
+  const bad=cpu>=70||mem>=75||disk>=80||swap>=50;
+  document.getElementById('resAlert').style.display=bad?'flex':'none';
+}
+
+// ── logs ───────────────────────────────────────────────
+let allLogs = [];
+
+async function loadLogsAPI(){
+  const fileKey = document.getElementById('logFile').value;
+  const lines   = document.getElementById('logLines').value;
+  const tbody   = document.getElementById('logBody');
+  const infoBanner = document.getElementById('log-file-info');
+
+  tbody.innerHTML = '<tr><td colspan="4" class="col-m" style="text-align:center;padding:28px;"><span class="spin"></span> 로그 읽는 중…</td></tr>';
+  infoBanner.style.display = 'none';
+
+  try {
+    const url = mgmtUrl('/logs') + `?file=${fileKey}&lines=${lines}`;
+    const r = await fetch(url, {credentials:'omit'});
+    const d = await r.json();
+
+    if(d.error){
+      tbody.innerHTML = `<tr><td colspan="4" class="col-r" style="text-align:center;padding:28px;">⚠ ${d.error}${d.hint ? '<br><span class="col-m fz11">'+d.hint+'</span>' : ''}</td></tr>`;
+      return;
+    }
+
+    allLogs = d.items || [];
+
+    // 파일 정보 배너
+    const kb = d.fileSize ? (d.fileSize/1024).toFixed(0) + ' KB' : '';
+    const mod = d.lastModified ? d.lastModified.slice(0,19).replace('T',' ') : '';
+    infoBanner.className = 'alert';
+    infoBanner.style.cssText = 'display:flex;margin-bottom:12px;font-size:12px;background:var(--card2);border:1px solid var(--border);';
+    infoBanner.innerHTML = `📄 <strong style="margin:0 6px;">${d.path || fileKey}</strong> · ${kb} · 마지막 수정: ${mod} · 파싱된 항목: <strong style="margin-left:4px;">${d.totalParsed}건</strong>`;
+
+    updateLogCounters(allLogs);
+    filterLogs();
+
+  } catch(e){
+    tbody.innerHTML = `<tr><td colspan="4" class="col-r" style="text-align:center;padding:28px;">연결 실패: ${e.message}<br><span class="col-m fz11">metrics_server.py가 실행 중인지 확인하세요</span></td></tr>`;
+  }
+}
+
+function loadLogsDemo(){
+  allLogs=[
+    {t:'2026-06-25 09:14:22',lv:'ERROR',  src:'obips1',  msg:'Connection pool exhausted: DataSource [sales_db]'},
+    {t:'2026-06-25 09:10:05',lv:'WARNING',src:'nqserver', msg:'Query execution time exceeded threshold: 45s'},
+    {t:'2026-06-25 08:55:11',lv:'ERROR',  src:'sawlog',   msg:'Unable to connect to BI Server: timeout after 30s'},
+    {t:'2026-06-25 08:30:00',lv:'INFO',   src:'obips1',   msg:'User admin logged in successfully'},
+    {t:'2026-06-25 07:45:33',lv:'WARNING',src:'obisch1',  msg:'Scheduled job [Monthly_Report] delayed 15 minutes'},
+    {t:'2026-06-25 06:00:01',lv:'INFO',   src:'domain',   msg:'WebLogic server started successfully on port 7001'},
+    {t:'2026-06-24 23:15:42',lv:'ERROR',  src:'nqserver', msg:'RPD consistency check failed: 3 errors found'},
+    {t:'2026-06-24 22:00:00',lv:'INFO',   src:'obisch1',  msg:'Scheduled backup completed successfully'},
+    {t:'2026-06-24 18:30:15',lv:'WARNING',src:'obips1',   msg:'Cache hit rate below 60%: consider cache rebuild'},
+    {t:'2026-06-24 15:22:08',lv:'ERROR',  src:'sawlog',   msg:'ODBC error: ORA-12154 TNS could not resolve'},
+  ];
+  document.getElementById('log-file-info').style.display = 'none';
+  updateLogCounters(allLogs);
+  filterLogs();
+}
+
+function updateLogCounters(logs){
+  const e = logs.filter(l=>l.lv==='ERROR').length;
+  const w = logs.filter(l=>l.lv==='WARNING').length;
+  const i = logs.filter(l=>l.lv==='INFO'||l.lv==='TRACE').length;
+  document.getElementById('lcnt-e').textContent = e;
+  document.getElementById('lcnt-w').textContent = w;
+  document.getElementById('lcnt-i').textContent = i;
+  const le = logs.find(l=>l.lv==='ERROR');
+  if(le){
+    document.getElementById('lcnt-last').textContent = le.src.toUpperCase();
+    document.getElementById('lcnt-last-t').textContent = le.t;
+  } else {
+    document.getElementById('lcnt-last').textContent = '없음';
+    document.getElementById('lcnt-last-t').textContent = '';
+  }
+  document.getElementById('tbLog').textContent = e;
+  document.getElementById('tbLog').style.display = e ? 'inline-block' : 'none';
+}
+
+const LV_CLS={ERROR:'b-red',WARNING:'b-yellow',INFO:'b-blue',TRACE:'b-gray'};
+function renderLogs(rows){
+  const esc = s => s.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  document.getElementById('logBody').innerHTML = rows.length
+    ? rows.map(l=>`<tr>
+        <td class="mono col-m" style="white-space:nowrap;">${l.t}</td>
+        <td><span class="badge ${LV_CLS[l.lv]||'b-gray'}">${l.lv}</span></td>
+        <td class="col-m fz11">${esc(l.src||'')}</td>
+        <td style="word-break:break-all;font-size:12px;">${esc(l.msg||'')}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="4" class="col-m" style="text-align:center;padding:20px;">일치하는 로그 없음</td></tr>`;
+}
+
+function filterLogs(){
+  const q  = document.getElementById('logQ').value.toLowerCase();
+  const lv = document.getElementById('logLevel').value;
+  renderLogs(allLogs.filter(l=>
+    (!lv || l.lv === lv) &&
+    (!q  || (l.msg||'').toLowerCase().includes(q) || (l.src||'').toLowerCase().includes(q))
+  ));
+}
+
+// ── content ────────────────────────────────────────────
+function loadContent(){
+  if(S.connected && !S.isDemo) loadContentAPI();
+  else loadContentDemo();
+}
+
+async function loadContentAPI(){
+  document.getElementById('recentBody').innerHTML =
+    '<tr><td colspan="5" class="col-m" style="text-align:center;padding:24px;"><span class="spin"></span> 로드 중…</td></tr>';
+  try {
+    // 최대 200개 항목 조회 (페이지 크기 제한은 서버 설정에 따라 다름)
+    const d = await fetchOAS('/catalog?itemPerPage=200&startIndex=1');
+    const items = d.items || [];
+    const total = d.totalResults ?? d.count ?? items.length;
+
+    const counts = { dashboard:0, workbook:0, dataset:0 };
+    const thirtyDaysAgo = new Date(Date.now() - 30*24*60*60*1000);
+    const recent = [];
+
+    items.forEach(item => {
+      const t = (item.type || '').toLowerCase();
+      if(t.includes('dashboard'))    counts.dashboard++;
+      else if(t.includes('workbook'))counts.workbook++;
+      else if(t.includes('dataset')) counts.dataset++;
+
+      const mod = item.dateModified || item.lastModified;
+      if(mod && new Date(mod) > thirtyDaysAgo) recent.push(item);
+    });
+
+    document.getElementById('cnt-db').textContent = counts.dashboard || '--';
+    document.getElementById('cnt-wb').textContent = counts.workbook  || '--';
+    document.getElementById('cnt-ds').textContent = counts.dataset   || '--';
+    document.getElementById('cnt-rc').textContent = recent.length;
+
+    const typeCls   = { dashboard:'b-blue', workbook:'b-green', dataset:'b-yellow' };
+    const typeLabel  = { dashboard:'대시보드', workbook:'워크북', dataset:'데이터셋' };
+
+    recent.sort((a,b)=>new Date(b.dateModified||b.lastModified||0)-new Date(a.dateModified||a.lastModified||0));
+    document.getElementById('recentBody').innerHTML = recent.length
+      ? recent.map(r=>{
+          const tKey = Object.keys(typeLabel).find(k=>(r.type||'').toLowerCase().includes(k)) || '';
+          const modDate = (r.dateModified||r.lastModified||'').slice(0,10);
+          return `<tr>
+            <td class="fw7">${r.displayName||r.name||'--'}</td>
+            <td><span class="badge ${typeCls[tKey]||'b-gray'}">${typeLabel[tKey]||r.type||'--'}</span></td>
+            <td class="col-m">${modDate||'--'}</td>
+            <td class="col-m">${r.ownedBy||r.owner||'--'}</td>
+            <td class="mono col-m">${r.path||'--'}</td>
+          </tr>`;
+        }).join('')
+      : '<tr><td colspan="5" class="col-m" style="text-align:center;padding:24px;">최근 30일 변경 항목 없음</td></tr>';
+  } catch(err){
+    document.getElementById('recentBody').innerHTML =
+      `<tr><td colspan="5" class="col-r" style="text-align:center;padding:24px;">로드 실패: ${err.message}</td></tr>`;
+  }
+}
+
+function loadContentDemo(){
+  const rows=[
+    {name:'매출 현황 대시보드',type:'대시보드',date:'2026-06-24',owner:'hong.gildong',path:'/shared/Sales'},
+    {name:'월별 KPI 워크북',   type:'워크북',  date:'2026-06-22',owner:'kim.minsu',  path:'/shared/Finance'},
+    {name:'고객 분석 데이터셋', type:'데이터셋',date:'2026-06-20',owner:'lee.jiyeon', path:'/shared/CRM'},
+    {name:'인사 현황 대시보드', type:'대시보드',date:'2026-06-18',owner:'park.soonji',path:'/shared/HR'},
+    {name:'재고 분석 워크북',   type:'워크북',  date:'2026-06-15',owner:'choi.hw',   path:'/shared/Supply'},
+    {name:'물류 KPI 대시보드',  type:'대시보드',date:'2026-06-12',owner:'yoon.js',   path:'/shared/Logistics'},
+    {name:'재무 요약 보고서',   type:'워크북',  date:'2026-06-10',owner:'han.mj',    path:'/shared/Finance'},
+  ];
+  const typeCls={대시보드:'b-blue',워크북:'b-green',데이터셋:'b-yellow'};
+  document.getElementById('recentBody').innerHTML=rows.map(r=>
+    `<tr><td class="fw7">${r.name}</td><td><span class="badge ${typeCls[r.type]||'b-gray'}">${r.type}</span></td><td class="col-m">${r.date}</td><td class="col-m">${r.owner}</td><td class="mono col-m">${r.path}</td></tr>`
+  ).join('');
+}
+
+// ── usage tracking ─────────────────────────────────────
+let usageData = {};
+
+async function loadUsage(){
+  const period = document.getElementById('usagePeriod').value;
+  const setupBanner = document.getElementById('usage-setup-banner');
+  const errBanner   = document.getElementById('usage-err-banner');
+  setupBanner.style.display = 'none';
+  errBanner.style.display   = 'none';
+
+  const loading = '<tr><td colspan="5" class="col-m" style="text-align:center;padding:20px;"><span class="spin"></span> 조회 중…</td></tr>';
+  ['us-top-body','us-slow-body','us-user-body','us-sa-body'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = loading;
+  });
+
+  try {
+    const r = await fetch(mgmtUrl('/usage') + `?period=${period}`, {credentials:'omit'});
+    const d = await r.json();
+    usageData = d;
+
+    if(!d.configured){
+      setupBanner.style.display = 'flex';
+      document.getElementById('usage-setup-hint').textContent = d.hint || d.error || '';
+      ['us-top-body','us-slow-body','us-user-body','us-sa-body'].forEach(id =>
+        document.getElementById(id).innerHTML = '<tr><td colspan="5" class="col-m" style="text-align:center;padding:20px;">Usage Tracking DB 설정 필요</td></tr>');
+      return;
+    }
+    if(d.error){
+      errBanner.textContent = '⚠ ' + d.error;
+      errBanner.style.display = 'flex';
+      return;
+    }
+
+    // 요약 카드
+    const s = d.summary || {};
+    document.getElementById('us-total').textContent   = (s.total_queries||0).toLocaleString();
+    document.getElementById('us-users').textContent   = s.unique_users ?? '--';
+    document.getElementById('us-avgsec').textContent  = s.avg_sec ?? '--';
+    document.getElementById('us-period-lbl').textContent = `최근 ${period}일`;
+    const errRate = s.total_queries
+      ? ((s.total_errors||0) / s.total_queries * 100).toFixed(1) + '%'
+      : '--';
+    document.getElementById('us-errrate').textContent = errRate;
+    document.getElementById('us-errcnt').textContent  = `오류 건수 ${(s.total_errors||0).toLocaleString()}`;
+
+    // 탭 배지
+    const badge = document.getElementById('tbUsage');
+    badge.textContent = s.unique_reports ?? '';
+    badge.style.display = s.unique_reports ? 'inline-block' : 'none';
+
+    // 일별 추이 미니 막대 차트
+    renderTrendChart(d.dailyTrend || []);
+
+    // 많이 사용된 리포트
+    const esc = s => String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const shortPath = p => p ? p.split('/').slice(-2).join('/') : '--';
+    document.getElementById('us-top-body').innerHTML = (d.topReports||[]).length
+      ? d.topReports.map((r,i) => `<tr>
+          <td title="${esc(r.path)}" style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">
+            <span class="badge b-gray" style="font-size:10px;margin-right:4px;">${i+1}</span>${esc(shortPath(r.path))}
+          </td>
+          <td style="text-align:right;font-weight:600;">${(r.hit_count||0).toLocaleString()}</td>
+          <td style="text-align:right;">${r.unique_users??'--'}</td>
+          <td style="text-align:right;${(r.avg_sec||0)>30?'color:var(--red)':''}">${r.avg_sec??'--'}</td>
+          <td class="col-m fz11">${(r.last_used||'').slice(0,10)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="5" class="col-m" style="text-align:center;padding:20px;">데이터 없음</td></tr>';
+
+    // 느린 리포트
+    document.getElementById('us-slow-body').innerHTML = (d.slowReports||[]).length
+      ? d.slowReports.map(r => `<tr>
+          <td title="${esc(r.path)}" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">${esc(shortPath(r.path))}</td>
+          <td style="text-align:right;color:var(--red);font-weight:600;">${r.avg_sec}</td>
+          <td style="text-align:right;">${r.max_sec}</td>
+          <td style="text-align:right;">${r.hit_count}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="4" class="col-m" style="text-align:center;padding:20px;">데이터 없음</td></tr>';
+
+    // 상위 사용자
+    document.getElementById('us-user-body').innerHTML = (d.topUsers||[]).length
+      ? d.topUsers.map(u => `<tr>
+          <td style="font-weight:500;">${esc(u.username)}</td>
+          <td style="text-align:right;">${(u.hit_count||0).toLocaleString()}</td>
+          <td style="text-align:right;">${u.unique_reports??'--'}</td>
+          <td style="text-align:right;">${u.avg_sec??'--'}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="4" class="col-m" style="text-align:center;padding:20px;">데이터 없음</td></tr>';
+
+    // Subject Area
+    document.getElementById('us-sa-body').innerHTML = (d.subjectAreas||[]).length
+      ? d.subjectAreas.map(a => `<tr>
+          <td style="font-size:12px;">${esc(a.subject_area)}</td>
+          <td style="text-align:right;">${(a.hit_count||0).toLocaleString()}</td>
+          <td style="text-align:right;">${a.unique_users??'--'}</td>
+          <td style="text-align:right;">${a.avg_sec??'--'}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="4" class="col-m" style="text-align:center;padding:20px;">데이터 없음</td></tr>';
+
+  } catch(e) {
+    errBanner.textContent = '연결 실패: ' + e.message + ' (metrics_server.py 실행 중인지 확인)';
+    errBanner.style.display = 'flex';
+  }
+}
+
+function renderTrendChart(trend){
+  const chart  = document.getElementById('us-trend-chart');
+  const labels = document.getElementById('us-trend-labels');
+  if(!trend.length){ chart.innerHTML='<span class="col-m fz11">데이터 없음</span>'; return; }
+  const maxVal = Math.max(...trend.map(d=>d.total), 1);
+  const barW   = Math.max(4, Math.floor(chart.offsetWidth / trend.length) - 3);
+  chart.innerHTML = trend.map(d => {
+    const h  = Math.max(2, Math.round((d.total / maxVal) * 56));
+    const errH = d.errors ? Math.max(1, Math.round((d.errors/d.total)*h)) : 0;
+    return `<div title="${d.day}: ${d.total}건 (오류 ${d.errors}건)"
+              style="display:flex;flex-direction:column;align-items:center;width:${barW}px;flex-shrink:0;">
+              ${errH ? `<div style="width:100%;height:${errH}px;background:var(--red);opacity:.8;"></div>` : ''}
+              <div style="width:100%;height:${h-errH}px;background:var(--blue);opacity:.7;"></div>
+            </div>`;
+  }).join('');
+  // 7일 간격으로 날짜 표시
+  labels.innerHTML = trend.map((d,i) =>
+    (i % 7 === 0)
+      ? `<span style="font-size:9px;color:var(--muted);white-space:nowrap;width:${barW}px;flex-shrink:0;">${d.day.slice(5)}</span>`
+      : `<span style="width:${barW}px;flex-shrink:0;"></span>`
+  ).join('');
+}
+
+async function detectUnusedContent(){
+  const result = document.getElementById('us-unused-result');
+  result.innerHTML = '<span class="spin"></span> 카탈로그와 사용량 데이터 교차 분석 중…';
+
+  const usedPaths = new Set(usageData.usedPaths || []);
+  if(!usedPaths.size){
+    result.innerHTML = '⚠ Usage Tracking 데이터가 없거나 먼저 "조회" 버튼을 눌러주세요.';
+    return;
+  }
+
+  try {
+    const d = await fetchOAS('/catalog?itemPerPage=500&startIndex=1');
+    const items = d.items || [];
+    const period = document.getElementById('usagePeriod').value;
+
+    const unused = items.filter(item => {
+      const path = item.path || item.id || '';
+      return path && !usedPaths.has(path);
+    });
+
+    if(!unused.length){
+      result.innerHTML = `✅ 모든 카탈로그 항목이 최근 ${period}일 내 사용되었습니다.`;
+      return;
+    }
+
+    const esc = s => String(s||'').replace(/</g,'&lt;');
+    result.innerHTML = `
+      <div style="text-align:left;">
+        <div class="alert a-warn" style="margin-bottom:12px;">
+          ⚠ 최근 ${period}일 내 사용 이력 없는 항목: <strong>${unused.length}개</strong>
+          (전체 카탈로그 ${items.length}개 중)
+        </div>
+        <div style="overflow:auto;max-height:300px;">
+          <table class="tbl">
+            <thead><tr><th>유형</th><th>경로</th><th>소유자</th></tr></thead>
+            <tbody>${unused.slice(0,100).map(i=>`<tr>
+              <td class="fz11"><span class="badge b-gray">${esc(i.type||'--')}</span></td>
+              <td style="font-size:12px;word-break:break-all;">${esc(i.path||i.id||'--')}</td>
+              <td class="col-m fz11">${esc(i.owner||'--')}</td>
+            </tr>`).join('')}
+            ${unused.length>100?`<tr><td colspan="3" class="col-m" style="text-align:center;padding:8px;">+${unused.length-100}건 더 있음</td></tr>`:''}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  } catch(e) {
+    result.innerHTML = `⚠ 카탈로그 조회 실패: ${e.message}`;
+  }
+}
+
+// ── orphan ─────────────────────────────────────────────
+function scanOrphansDemo(){
+  allOrphans=[
+    {name:'구매팀 현황',      type:'대시보드',owner:'jung.sh (비활성)', date:'2025-11-12',path:'/shared/Purchase',action:'소유권 이전'},
+    {name:'2023 연간 실적',   type:'워크북',  owner:'oh.th (비활성)',   date:'2024-03-05',path:'/shared/Finance', action:'검토 후 삭제'},
+    {name:'물류 KPI',         type:'대시보드',owner:'yoon.js (비활성)', date:'2025-08-20',path:'/shared/Logistics',action:'소유권 이전'},
+    {name:'구 CRM 데이터',    type:'데이터셋',owner:'han.mj (비활성)',  date:'2023-12-01',path:'/shared/CRM/old', action:'검토 후 삭제'},
+    {name:'테스트 대시보드',  type:'대시보드',owner:'deleted_user',     date:'2024-07-14',path:'/users/del',       action:'즉시 삭제'},
+  ];
+  document.getElementById('o-total').textContent=allOrphans.length;
+  document.getElementById('o-acct').textContent=4;
+  document.getElementById('o-urgent').textContent=allOrphans.filter(o=>o.action==='즉시 삭제').length;
+  document.getElementById('tbOrphan').textContent=allOrphans.length;
+  document.getElementById('tbOrphan').style.display='inline-block';
+  renderOrphans(allOrphans);
+}
+const ACT_CLS={'소유권 이전':'b-yellow','검토 후 삭제':'b-yellow','즉시 삭제':'b-red'};
+function renderOrphans(rows){
+  document.getElementById('orphanBody').innerHTML=rows.length
+    ?rows.map(o=>`<tr><td class="fw7">${o.name}</td><td><span class="badge b-blue">${o.type}</span></td><td class="col-r">${o.owner}</td><td class="col-m">${o.date}</td><td class="mono col-m">${o.path}</td><td><span class="badge ${ACT_CLS[o.action]||'b-gray'}">${o.action}</span></td></tr>`).join('')
+    :`<tr><td colspan="6" class="col-m" style="text-align:center;padding:20px;">탐지된 항목 없음</td></tr>`;
+}
+function filterOrphans(){
+  const q=document.getElementById('oQ').value.toLowerCase();
+  const tp=document.getElementById('oType').value;
+  renderOrphans(allOrphans.filter(o=>(!tp||o.type===tp)&&(!q||o.name.toLowerCase().includes(q)||o.owner.toLowerCase().includes(q))));
+}
+
+// ── upgrade assessment ─────────────────────────────────
+async function detectServerVersion(){
+  const banner = document.getElementById('upg-ver-banner');
+  const errBanner = document.getElementById('upg-ver-err');
+  banner.style.display = 'none';
+  errBanner.style.display = 'none';
+  try {
+    const r = await fetch(mgmtUrl('/version'), {credentials:'omit'});
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if(d.version){
+      document.getElementById('upg-ver-str').textContent = d.version;
+      document.getElementById('upg-ver-src').textContent = '(출처: ' + d.source + ')';
+      banner.style.display = 'flex';
+      autoSelectVersion(d.version);
+    } else {
+      const msg = d.error || '버전 정보 없음';
+      document.getElementById('upg-ver-err-msg').textContent = msg;
+      errBanner.style.display = 'flex';
+    }
+  } catch(e){
+    // metrics_server.py 미실행 시 조용히 무시 (배너 숨김 유지)
+  }
+}
+
+function autoSelectVersion(ver){
+  const sel = document.getElementById('upg-fromver');
+  if(!sel || !ver) return;
+  const v = ver.trim();
+  if     (/^(7\.|2026)/i.test(v))  sel.value = 'oas7';
+  else if(/^6\./i.test(v))         sel.value = 'oas6';
+  else if(/^5\./i.test(v))         sel.value = 'oas5';
+  else if(/^12\./i.test(v))        sel.value = 'obiee12';
+  else if(/^11\./i.test(v))        sel.value = 'obiee11';
+  updateUpgradeNotes();
+}
+
+const UPG_CATALOG_TYPES = [
+  { key:'workbooks',   label:'워크북',       color:'var(--green)'  },
+  { key:'datasets',    label:'데이터셋',     color:'var(--orange)' },
+  { key:'dataflows',   label:'데이터플로우', color:'var(--blue)'   },
+  { key:'sequences',   label:'시퀀스',       color:'var(--yellow)' },
+  { key:'analyses',    label:'분석 (Answers)',color:'var(--text2)' },
+  { key:'dashboards',  label:'대시보드',     color:'var(--blue)'   },
+  { key:'connections', label:'데이터 연결',  color:'var(--muted)'  },
+];
+
+let upgData = {};
+
+async function collectUpgradeInfo(){
+  if(!S.connected || S.isDemo){ cStat('서버에 연결 후 실행하세요.','col-y'); return; }
+
+  // 카탈로그 유형별 카운트 (병렬 요청)
+  const counts = await Promise.all(UPG_CATALOG_TYPES.map(async t => {
+    try {
+      const d = await fetchOAS('/catalog/' + t.key + '?itemPerPage=1');
+      return { ...t, count: d.totalResults ?? d.count ?? d.items?.length ?? 0 };
+    } catch(_){ return { ...t, count: null }; }
+  }));
+  upgData.catalog = counts;
+
+  const total = counts.reduce((s,c) => s + (c.count||0), 0);
+  document.getElementById('upg-catalog-grid').innerHTML =
+    counts.map(c => `
+      <div class="card card-sm" style="border-top:3px solid ${c.color}">
+        <div class="ct">${c.label}</div>
+        <div class="big-num">${c.count !== null ? c.count : '—'}</div>
+      </div>`).join('') +
+    `<div class="card card-sm" style="border-top:3px solid var(--red)">
+       <div class="ct">전체 합계</div>
+       <div class="big-num">${total}</div>
+     </div>`;
+
+  // 시스템 설정
+  try {
+    const sys = await fetchOAS('/system/settings');
+    upgData.settings = sys;
+    const rows = flattenSettings(sys);
+    document.getElementById('upg-settings-body').innerHTML = rows.length
+      ? rows.map(([k,v]) => `<tr><td class="col-m mono" style="font-size:11px;">${k}</td><td>${v}</td></tr>`).join('')
+      : '<tr><td colspan="2" class="col-m" style="text-align:center;padding:16px;">설정 항목 없음</td></tr>';
+  } catch(err){
+    document.getElementById('upg-settings-body').innerHTML =
+      `<tr><td colspan="2" class="col-r" style="text-align:center;padding:16px;">조회 불가: ${err.message}</td></tr>`;
+  }
+
+  // 안전 도메인
+  try {
+    const sd = await fetchOAS('/system/safeDomains');
+    upgData.safeDomains = sd;
+    const items = sd.items || (Array.isArray(sd) ? sd : []);
+    document.getElementById('upg-domains-body').innerHTML = items.length
+      ? items.map(d => `<tr>
+          <td class="mono">${d.domain || d.url || d.id || JSON.stringify(d)}</td>
+          <td class="col-m">${d.type || '--'}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="2" class="col-m" style="text-align:center;padding:16px;">등록된 도메인 없음</td></tr>';
+  } catch(err){
+    document.getElementById('upg-domains-body').innerHTML =
+      `<tr><td colspan="2" class="col-r" style="text-align:center;padding:16px;">조회 불가: ${err.message}</td></tr>`;
+  }
+
+  updateUpgradeNotes();
+}
+
+function flattenSettings(obj, prefix=''){
+  const result = [];
+  for(const [k, v] of Object.entries(obj || {})){
+    const key = prefix ? prefix + '.' + k : k;
+    if(v !== null && typeof v === 'object' && !Array.isArray(v))
+      result.push(...flattenSettings(v, key));
+    else
+      result.push([key, Array.isArray(v) ? v.join(', ') : String(v ?? '--')]);
+  }
+  return result;
+}
+
+const UPG_NOTES = {
+  obiee11:[
+    {lv:'error', txt:'OBIEE 11g → OAS 2026 직접 업그레이드 불가. OAS 6.x 또는 7.x를 중간 경유해야 합니다.'},
+    {lv:'warn',  txt:'11g 카탈로그 마이그레이션 도구(Upgrade Assistant) 실행 필요'},
+    {lv:'warn',  txt:'Delivers(iBot) → OAS Agents로 마이그레이션 필요'},
+    {lv:'warn',  txt:'11g 커스텀 스킨·스타일은 OAS 2026과 호환 안 됨 → 재작성 필요'},
+    {lv:'warn',  txt:'Physical Layer RPD 검토 필요: 11g 일부 드라이버·연결 유형 변경됨'},
+    {lv:'info',  txt:'JDK 17 이상 필요 (OAS 2026 요구사항)'},
+    {lv:'info',  txt:'Oracle DB 19c 이상 권장 (RCU 스키마)'},
+    {lv:'info',  txt:'WebLogic 14.1.x 이상 필요'},
+  ],
+  obiee12:[
+    {lv:'warn',  txt:'OBIEE 12c RCU 스키마 → OAS 2026 스키마로 업그레이드(runInstaller) 필요'},
+    {lv:'warn',  txt:'12c 카탈로그 호환성 검증 필요 — 대부분 호환되나 일부 Answers 보고서 확인'},
+    {lv:'warn',  txt:'WebLogic 14.1.x 이상으로 업그레이드 필요'},
+    {lv:'info',  txt:'JDK 17 이상 필요'},
+    {lv:'info',  txt:'OAS 2026은 12c 대비 DV(Data Visualization) 기능 대폭 강화'},
+    {lv:'info',  txt:'기존 RPD(물리 계층·비즈니스 계층·프레젠테이션 계층) 대부분 호환'},
+  ],
+  oas5:[
+    {lv:'warn',  txt:'OAS 5.x → OAS 2026: OAS 6.x 경유 업그레이드 권장'},
+    {lv:'warn',  txt:'RCU 스키마 버전 확인 후 업그레이드 실행 필요'},
+    {lv:'warn',  txt:'OAS 5.x 연결(Connection) 설정 일부 재구성 필요'},
+    {lv:'info',  txt:'DV 워크북·카탈로그 대부분 호환'},
+    {lv:'info',  txt:'JDK 17 이상 필요'},
+  ],
+  oas6:[
+    {lv:'info',  txt:'OAS 6.x → OAS 2026: 지원되는 업그레이드 경로'},
+    {lv:'warn',  txt:'RCU 스키마 업그레이드 실행 필요 (psa 또는 UA 활용)'},
+    {lv:'warn',  txt:'OHS 설정 파일(httpd.conf, virtual host) 변경사항 검토 필요'},
+    {lv:'info',  txt:'기존 카탈로그·RPD 대부분 호환'},
+    {lv:'info',  txt:'JDK 17 이상 필요'},
+  ],
+  oas7:[
+    {lv:'ok',    txt:'OAS 7.x → OAS 2026: 가장 수월한 업그레이드 경로 (아키텍처 동일)'},
+    {lv:'info',  txt:'패치 번들 적용 또는 전체 재설치 방식 모두 가능'},
+    {lv:'info',  txt:'기존 카탈로그·RPD 완전 호환'},
+    {lv:'warn',  txt:'RCU 스키마 버전 확인 후 필요 시 업그레이드'},
+    {lv:'info',  txt:'JDK 버전 확인 (17 이상 권장)'},
+  ],
+};
+
+const UPG_NOTE_EXTRA = {
+  skin: {lv:'warn', txt:'커스텀 스킨 사용 중: OAS 2026 UI 프레임워크 변경으로 스킨 재검토 필요'},
+  wb:   {lv:'warn', txt:'Writeback 사용 중: 업그레이드 후 Writeback 테이블·쿼리 재검증 필요'},
+  sso:  {lv:'warn', txt:'SSO 연동 사용 중: 업그레이드 후 SSO(OAM/IDCS) 재설정 필요'},
+  ldap: {lv:'warn', txt:'LDAP/AD 인증 사용 중: 업그레이드 후 LDAP 프로바이더 재설정 필요'},
+  krb:  {lv:'warn', txt:'Kerberos 인증 사용 중: Kerberos 설정 파일(krb5.conf) 재배포 필요'},
+};
+
+function updateUpgradeNotes(){
+  const ver  = document.getElementById('upg-fromver')?.value;
+  const sec  = document.getElementById('upg-notes-sec');
+  const body = document.getElementById('upg-notes-body');
+  if(!ver || !UPG_NOTES[ver]){ sec.style.display='none'; return; }
+
+  const notes = [...UPG_NOTES[ver]];
+  if(document.getElementById('upg-skin')?.value === 'yes') notes.push(UPG_NOTE_EXTRA.skin);
+  if(document.getElementById('upg-wb')?.value   === 'yes') notes.push(UPG_NOTE_EXTRA.wb);
+  if(document.getElementById('upg-sso')?.value  === 'yes') notes.push(UPG_NOTE_EXTRA.sso);
+  const auth = document.getElementById('upg-auth')?.value;
+  if(auth === 'ldap' || auth === 'oid') notes.push(UPG_NOTE_EXTRA.ldap);
+  if(auth === 'krb')                    notes.push(UPG_NOTE_EXTRA.krb);
+
+  const clsMap = {error:'a-error', warn:'a-warn', ok:'a-ok', info:''};
+  const iconMap = {error:'🚫', warn:'⚠', ok:'✓', info:'ℹ'};
+  body.innerHTML = notes.map(n =>
+    `<div class="alert ${clsMap[n.lv]}" style="${!clsMap[n.lv]?'background:var(--card2);border:1px solid var(--border);color:var(--text2);':''} margin-bottom:8px;">
+       ${iconMap[n.lv]} ${n.txt}
+     </div>`
+  ).join('');
+  sec.style.display = '';
+}
+
+function exportUpgradeReport(){
+  const g = id => document.getElementById(id)?.value || '--';
+  const fromVer = g('upg-fromver'); const os = g('upg-os');
+  const jdk = g('upg-jdk');         const db = g('upg-db');
+  const ohome = g('upg-ohome');      const dhome = g('upg-dhome');
+  const auth = g('upg-auth');        const wb = g('upg-wb');
+  const sso = g('upg-sso');          const skin = g('upg-skin');
+
+  const hr = '='.repeat(55);
+  const lines = [
+    'OAS 2026 업그레이드 사전 진단 보고서',
+    '생성일시: ' + new Date().toLocaleString('ko-KR'),
+    '대상 서버: ' + (S.url || '--'),
+    hr, '',
+    '[1. 현재 환경]',
+    '  현재 버전  : ' + fromVer,
+    '  목표 버전  : OAS 2026',
+    '  OS         : ' + os,
+    '  JDK        : ' + jdk,
+    '  DB         : ' + db,
+    '  ORACLE_HOME: ' + ohome,
+    '  DOMAIN_HOME: ' + dhome,
+    '  인증 방식  : ' + auth,
+    '  커스텀 스킨: ' + (skin==='yes'?'있음':'없음'),
+    '  Writeback  : ' + (wb==='yes'?'사용':'미사용'),
+    '  SSO        : ' + (sso==='yes'?'사용':'미사용'),
+    '', hr, '',
+    '[2. 카탈로그 현황 (API 수집)]',
+    ...(upgData.catalog||[]).map(c => `  ${c.label.padEnd(16)}: ${c.count !== null ? c.count + '개' : '미수집'}`),
+    '', hr, '',
+    '[3. 안전 도메인]',
+    ...((upgData.safeDomains?.items||[]).map(d => '  ' + (d.domain||d.id||JSON.stringify(d)))),
+    '', hr, '',
+    '[4. 업그레이드 주의사항]',
+    ...((UPG_NOTES[fromVer]||[]).map(n => `  [${n.lv.toUpperCase()}] ${n.txt}`)),
+  ];
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\n')], {type:'text/plain;charset=utf-8'}));
+  a.download = 'oas2026_upgrade_' + new Date().toISOString().slice(0,10) + '.txt';
+  a.click();
+}
+
+// ── snapshot ───────────────────────────────────────────
+function mgmtUrl(path){ return (S.url || window.location.origin) + '/sysmgmt' + path; }
+
+function fmtFileSize(bytes){
+  if(!bytes) return '--';
+  if(bytes >= 1073741824) return (bytes/1073741824).toFixed(1) + ' GB';
+  if(bytes >= 1048576)    return (bytes/1048576).toFixed(1) + ' MB';
+  return (bytes/1024).toFixed(0) + ' KB';
+}
+
+async function loadSnapshots(){
+  try {
+    const r = await fetch(mgmtUrl('/snapshots'), {credentials:'omit'});
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const items = d.items || [];
+
+    document.getElementById('snap-count').textContent = items.length;
+    document.getElementById('snap-dir').textContent   = d.backupDir || '--';
+
+    if(items.length){
+      document.getElementById('snap-last').textContent      = items[0].name.slice(0,20);
+      document.getElementById('snap-last-size').textContent = fmtFileSize(items[0].size);
+    } else {
+      document.getElementById('snap-last').textContent      = '없음';
+      document.getElementById('snap-last-size').textContent = '--';
+    }
+
+    const st = d.status || {};
+    if(st.running){
+      document.getElementById('snap-running').textContent     = '실행 중';
+      document.getElementById('snap-running').className       = 'cv col-y';
+      document.getElementById('snap-last-result').textContent = '백업 진행 중…';
+    } else if(st.last){
+      document.getElementById('snap-running').textContent     = st.last.ok ? '성공' : '실패';
+      document.getElementById('snap-running').className       = 'cv ' + (st.last.ok ? 'col-g' : 'col-r');
+      document.getElementById('snap-last-result').textContent = st.last.time ? st.last.time.slice(0,16).replace('T',' ') : '--';
+    } else {
+      document.getElementById('snap-running').textContent     = '대기';
+      document.getElementById('snap-running').className       = 'cv col-m';
+      document.getElementById('snap-last-result').textContent = '아직 실행 안 됨';
+    }
+
+    document.getElementById('snapBody').innerHTML = items.length
+      ? items.map(f => `<tr>
+          <td class="mono">${f.name}</td>
+          <td class="col-m" style="text-align:right;">${fmtFileSize(f.size)}</td>
+          <td class="col-m">${(f.created||'').slice(0,16).replace('T',' ')}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="3" class="col-m" style="text-align:center;padding:20px;">저장된 스냅샷 없음</td></tr>';
+
+  } catch(err){
+    document.getElementById('snapBody').innerHTML =
+      `<tr><td colspan="3" class="col-r" style="text-align:center;padding:16px;">메트릭 서버 연결 실패: ${err.message}</td></tr>`;
+  }
+}
+
+async function createSnapshot(){
+  const btn = document.getElementById('snapBtn');
+  const al  = document.getElementById('snapAlert');
+  btn.disabled = true; btn.textContent = '백업 중…';
+  al.style.display = 'none';
+  try {
+    const r = await fetch(mgmtUrl('/snapshot'),
+                          {method:'POST', credentials:'omit'});
+    const d = await r.json();
+    al.className = 'alert ' + (d.ok ? 'a-ok' : 'a-error');
+    al.textContent = d.msg || (d.ok ? '백업이 시작됐습니다.' : '백업 실패');
+    al.style.display = 'flex';
+    if(d.ok) setTimeout(loadSnapshots, 3000);  // 3초 후 목록 갱신
+  } catch(err){
+    al.className = 'alert a-error';
+    al.textContent = '메트릭 서버 연결 실패: ' + err.message;
+    al.style.display = 'flex';
+  } finally {
+    btn.disabled = false; btn.textContent = '스냅샷 생성';
+  }
+}
+
+// ── patch checklist ────────────────────────────────────
+const PATCH_ITEMS=[
+  {cat:'사전 준비',key:'backup',   title:'전체 백업 완료',           desc:'카탈로그·RPD·WebLogic 도메인 백업 필수',auto:false},
+  {cat:'',         key:'snapshot', title:'VM/OS 스냅샷 생성',        desc:'가상화 환경 — 빠른 롤백 대비',auto:false},
+  {cat:'',         key:'diskspace',title:'디스크 여유 공간 ≥ 10 GB', desc:'패치 파일·임시 파일·백업 공간 필요',auto:true},
+  {cat:'버전 확인', key:'version',  title:'현재 OAS 버전 확인',       desc:'연결 시 자동 확인',auto:true},
+  {cat:'',         key:'opatch',   title:'OPatch ≥ 13.9.4.2 확인',   desc:'$ORACLE_HOME/OPatch/opatch version',auto:false,
+   cmd:'$ORACLE_HOME/OPatch/opatch version'},
+  {cat:'서비스 준비',key:'notice', title:'유지보수 공지 발송',        desc:'사용자에게 중단 일정 사전 고지',auto:false},
+  {cat:'',          key:'nosess',  title:'활성 세션 없음 확인',       desc:'모든 사용자 로그아웃 후 진행',auto:true},
+  {cat:'검증',      key:'testenv', title:'테스트 환경 검증 완료',     desc:'운영 적용 전 동일 패치 테스트 환경 적용',auto:false},
+  {cat:'',          key:'rollback',title:'롤백 절차 문서화',          desc:'패치 실패 시 복구 절차·담당자 명확히',auto:false},
+];
+
+function renderPatch(){
+  let html=''; let prevCat='';
+  PATCH_ITEMS.forEach(item=>{
+    if(item.cat && item.cat!==prevCat){ html+=`<div class="cat-label">${item.cat}</div>`; prevCat=item.cat; }
+    const st=patchState[item.key]; // undefined=미완료, true=OK, false=실패
+    const icls=st===true?'ci-ok':st===false?'ci-fail':'ci-idle';
+    const itxt=st===true?'✓':st===false?'✗':'○';
+    const bcls=st===true?'b-green':st===false?'b-red':'b-gray';
+    const btxt=st===true?'완료':st===false?'실패':'미완료';
+    html+=`<div class="chk-item">
+      <div class="chk-icon ${icls}" id="ci-${item.key}">${itxt}</div>
+      <div class="chk-body">
+        <div class="chk-title">${item.title}</div>
+        <div class="chk-desc">${item.desc}</div>
+        ${item.cmd?`<div class="cmd">${item.cmd}</div>`:''}
+      </div>
+      <div class="chk-right">
+        <span class="badge ${bcls}" id="cb-${item.key}">${btxt}</span>
+        <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="mark('${item.key}',true)">완료</button>
+        <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="mark('${item.key}',false)">실패</button>
+      </div>
+    </div>`;
+  });
+  document.getElementById('patchList').innerHTML=html;
+  updatePatchSummary();
+}
+
+function mark(key,val){
+  patchState[key]=val;
+  const icls=val?'ci-ok':'ci-fail'; const itxt=val?'✓':'✗';
+  const bcls=val?'b-green':'b-red'; const btxt=val?'완료':'실패';
+  const ci=document.getElementById('ci-'+key); if(ci){ci.className='chk-icon '+icls;ci.textContent=itxt;}
+  const cb=document.getElementById('cb-'+key); if(cb){cb.className='badge '+bcls;cb.textContent=btxt;}
+  updatePatchSummary();
+}
+
+function updatePatchSummary(){
+  const vals=Object.values(patchState);
+  document.getElementById('pc-ok').textContent=vals.filter(v=>v===true).length;
+  document.getElementById('pc-fail').textContent=vals.filter(v=>v===false).length;
+  document.getElementById('pc-warn').textContent=PATCH_ITEMS.length-vals.length;
+}
+
+function autoCheck(){
+  if(S.connected){ mark('version',true); mark('nosess',true); mark('diskspace',true); }
+  else { alert('서버에 연결 후 자동 점검을 실행하세요.'); }
+}
+
+function exportChecklist(){
+  const lines=PATCH_ITEMS.map(i=>{
+    const s=patchState[i.key]===true?'[완료]':patchState[i.key]===false?'[실패]':'[미완]';
+    return `${s} ${i.title}`;
+  });
+  const txt='OAS 패치 점검 체크리스트\n생성: '+new Date().toLocaleString('ko-KR')+'\n\n'+lines.join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain;charset=utf-8'}));
+  a.download='oas_patch_check_'+new Date().toISOString().slice(0,10)+'.txt';
+  a.click();
+}
+
+// ── runbook data ───────────────────────────────────────
+const RB={
+startup:{color:'var(--green)',label:'OAS 서비스 기동 절차',eta:'15~20분',steps:[
+  {title:'OS 리소스 확인',desc:'CPU·Memory·Disk 여유 공간 확인 후 기동',cmd:'df -h && free -h && uptime'},
+  {title:'Node Manager 기동',desc:'WebLogic Node Manager를 먼저 시작해야 AdminServer를 기동할 수 있습니다',cmd:'cd $DOMAIN_HOME/bin && nohup ./startNodeManager.sh &'},
+  {title:'WebLogic AdminServer 기동',desc:'포트 7001. 완전 기동까지 3~5분 소요',cmd:'cd $DOMAIN_HOME/bin && nohup ./startWebLogic.sh &'},
+  {title:'OAS Managed Server 기동',desc:'bi_server1 Managed Server 시작',cmd:'cd $DOMAIN_HOME/bin && nohup ./startManagedWebLogic.sh bi_server1 http://localhost:7001 &'},
+  {title:'BI 시스템 컴포넌트 기동',desc:'BI Server·Presentation Services·Scheduler 등',cmd:'$ORACLE_INSTANCE/bin/opmnctl startall'},
+  {title:'기동 확인',desc:'OAS 로그인 페이지 응답 확인',cmd:'curl -s -o /dev/null -w "%{http_code}" http://localhost:9502/analytics/'},
+]},
+shutdown:{color:'var(--red)',label:'OAS 서비스 종료 절차',eta:'10~15분',steps:[
+  {title:'사용자 공지 및 활성 세션 확인',desc:'접속 중인 사용자 없는지 확인 후 공지 발송'},
+  {title:'BI 시스템 컴포넌트 종료',desc:'BI Server·Presentation Services 순으로 종료',cmd:'$ORACLE_INSTANCE/bin/opmnctl stopall'},
+  {title:'OAS Managed Server 종료',cmd:'cd $DOMAIN_HOME/bin && ./stopManagedWebLogic.sh bi_server1 http://localhost:7001'},
+  {title:'WebLogic AdminServer 종료',cmd:'cd $DOMAIN_HOME/bin && ./stopWebLogic.sh'},
+  {title:'Node Manager 종료',cmd:'cd $DOMAIN_HOME/bin && ./stopNodeManager.sh'},
+  {title:'잔존 프로세스 확인',cmd:"ps -ef | grep -E 'weblogic|opmn|bifoundation' | grep -v grep"},
+]},
+backup:{color:'var(--blue)',label:'백업 절차',eta:'주 1회 권장',steps:[
+  {title:'카탈로그 아카이브',desc:'웹 콘솔 → 카탈로그 → 아카이브 또는 WLST',cmd:"catalog.py archive -name=\"full_backup_$(date +%Y%m%d)\""},
+  {title:'RPD 백업',desc:'메타데이터 저장소 파일 복사',cmd:'cp $ORACLE_INSTANCE/bifoundation/.../repository/*.rpd /backup/$(date +%Y%m%d)/'},
+  {title:'WebLogic 도메인 백업',cmd:'tar -czf /backup/$(date +%Y%m%d)/domain.tar.gz $DOMAIN_HOME'},
+  {title:'백업 무결성 확인',cmd:'tar -tzf /backup/$(date +%Y%m%d)/domain.tar.gz | tail -5'},
+  {title:'오래된 백업 정리 (30일 초과)',cmd:'find /backup -type d -mtime +30 -exec rm -rf {} +'},
+]},
+restore:{color:'var(--orange)',label:'복구 절차',eta:'장애 발생 시',steps:[
+  {title:'서비스 종료 (기동 중인 경우)',desc:'종료 Runbook 참고'},
+  {title:'복구 대상 백업 선택',cmd:'ls -lt /backup/ | head -10'},
+  {title:'도메인 복구',cmd:'tar -xzf /backup/YYYYMMDD/domain.tar.gz -C /'},
+  {title:'카탈로그 복구',desc:'웹 콘솔 → 카탈로그 → 언아카이브'},
+  {title:'서비스 기동 및 검증',desc:'기동 Runbook 참고 후 주요 대시보드 로드 확인'},
+]},
+migration:{color:'var(--yellow)',label:'환경 이전 절차',eta:'개발→테스트→운영',steps:[
+  {title:'소스 환경 콘텐츠 내보내기',desc:'카탈로그 전체 또는 특정 폴더 아카이브'},
+  {title:'RPD 연결 정보 변경',desc:'대상 환경 DB 연결 문자열로 변경 (Admin Tool 사용)'},
+  {title:'대상 환경에 콘텐츠 가져오기',desc:'언아카이브 후 경로 확인'},
+  {title:'사용자·권한 동기화 확인',desc:'소스 환경과 동일한 접근 권한 구성 확인'},
+  {title:'주요 콘텐츠 동작 검증',desc:'대표 대시보드 10개 이상 정상 로드 확인'},
+]},
+health:{color:'var(--text2)',label:'정기 점검 체크리스트',eta:'월 1회 권장',steps:[
+  {title:'로그 에러 검토',desc:'지난 30일 ERROR/WARNING 로그 검토 및 조치 현황 확인'},
+  {title:'소유자 없는 콘텐츠 정리',desc:'퇴사자 소유 콘텐츠 소유권 이전 또는 삭제'},
+  {title:'디스크 사용량 추세 확인',desc:'증가 추세 시 오래된 로그·임시 파일 정리'},
+  {title:'패치 현황 확인',desc:'Oracle CPU (Critical Patch Update) 최신 적용 여부'},
+  {title:'백업 복구 테스트',desc:'최근 백업으로 테스트 환경 복구 가능 여부 검증'},
+  {title:'사용자 계정 정기 감사',desc:'비활성 계정 잠금 및 권한 최소화 원칙 검토'},
+]},
+};
+
+let rbChecks={};
+function switchRb(){
+  const sel=document.getElementById('rbSel').value;
+  const rb=RB[sel]; if(!rb) return;
+  const key=k=>`rb-${sel}-${k}`;
+  let html=`<div style="margin-bottom:18px;border-left:3px solid ${rb.color};padding-left:12px;">
+    <div style="font-size:14px;font-weight:700;color:${rb.color};">${rb.label}</div>
+    <div class="fz11 col-m" style="margin-top:2px;">예상 소요: ${rb.eta}</div>
+  </div>`;
+  rb.steps.forEach((s,i)=>{
+    const cid=key(i);
+    const done=rbChecks[cid];
+    html+=`<div class="rb-step">
+      <div class="step-num">${i+1}</div>
+      <div class="step-body">
+        <div class="step-title">${s.title}</div>
+        ${s.desc?`<div class="step-desc">${s.desc}</div>`:''}
+        ${s.cmd?`<div class="cmd">${s.cmd}</div>`:''}
+      </div>
+      <div class="step-chk${done?' done':''}" id="${cid}" onclick="toggleRb('${cid}')">${done?'✓':''}</div>
+    </div>`;
+  });
+  document.getElementById('rbContent').innerHTML=html;
+}
+function toggleRb(id){
+  rbChecks[id]=!rbChecks[id];
+  const el=document.getElementById(id);
+  el.classList.toggle('done',rbChecks[id]);
+  el.textContent=rbChecks[id]?'✓':'';
+}
+function resetRb(){
+  const sel=document.getElementById('rbSel').value;
+  RB[sel].steps.forEach((_,i)=>{ delete rbChecks[`rb-${sel}-${i}`]; });
+  switchRb();
+}
+
+// ── init ───────────────────────────────────────────────
+renderPatch();
+switchRb();
+loadContentDemo();
+// 서버 URL 자동 감지
+(function(){
+  const origin = window.location.origin;
+  const urlInput = document.getElementById('oasUrl');
+  if(origin && !origin.startsWith('file://')){
+    urlInput.value = origin;
+  }
+})();
+</script>
+</body>
+</html>
