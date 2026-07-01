@@ -283,29 +283,72 @@ detect_oracle_base() {
 }
 
 # ════════════════════════════════════════════════════════════
+# 경로 검증 함수
+# vtype: oas_home | oas_domain | dir | file | (빈값=검증없음)
+# ════════════════════════════════════════════════════════════
+_check_path() {
+  local val="$1" vtype="$2"
+  case "$vtype" in
+    oas_home)   [[ -f "$val/bitools/bin/start.sh" ]]        ;;
+    oas_domain) [[ -d "$val/config/fmwconfig/biconfig" ]]   ;;
+    dir)        [[ -d "$val" ]]                              ;;
+    file)       [[ -f "$val" ]]                              ;;
+    *)          return 0                                     ;;
+  esac
+}
+
+_check_msg() {
+  case "$1" in
+    oas_home)   echo "OAS ORACLE_HOME이 아닙니다 (bitools/bin/start.sh 없음)" ;;
+    oas_domain) echo "OAS BI 도메인이 아닙니다 (config/fmwconfig/biconfig 없음)" ;;
+    dir)        echo "디렉터리가 존재하지 않습니다" ;;
+    file)       echo "파일이 존재하지 않습니다" ;;
+  esac
+}
+
+# ════════════════════════════════════════════════════════════
 # 탐지 결과를 사용자에게 보여주고 필요시 수정 입력받기
+# 인자: label varname detected [required] [vtype]
 # ════════════════════════════════════════════════════════════
 confirm_or_input() {
-  local label="$1" varname="$2" detected="$3" required="${4:-true}"
+  local label="$1" varname="$2" detected="$3" required="${4:-true}" vtype="${5:-}"
   local val="$detected"
 
-  if [[ -n "$val" ]]; then
-    echo -e "  ${C_GRN}✔${C_NC} $label"
-    echo -e "       $val"
-    read -rp "     변경하시겠습니까? [Enter=유지 / 새 경로 입력]: " override
-    [[ -n "$override" ]] && val="$override"
-  else
-    if [[ "$required" == "true" ]]; then
-      echo -e "  ${C_RED}✘${C_NC} $label (자동 감지 실패)"
-      read -rp "     직접 입력하세요: " val
-      while [[ -z "$val" ]]; do
-        read -rp "     필수 값입니다. 입력하세요: " val
-      done
+  while true; do
+    if [[ -n "$val" ]]; then
+      echo -e "  ${C_GRN}✔${C_NC} $label"
+      echo -e "       $val"
+      read -rp "     변경하시겠습니까? [Enter=유지 / 새 경로 입력]: " override
+      [[ -n "$override" ]] && val="$override"
     else
-      echo -e "  ${C_YLW}?${C_NC} $label (자동 감지 실패, 선택 항목)"
-      read -rp "     입력하세요 (Enter=건너뜀): " val
+      if [[ "$required" == "true" ]]; then
+        echo -e "  ${C_RED}✘${C_NC} $label (자동 감지 실패)"
+        read -rp "     직접 입력하세요: " val
+        while [[ -z "$val" ]]; do
+          read -rp "     필수 값입니다. 입력하세요: " val
+        done
+      else
+        echo -e "  ${C_YLW}?${C_NC} $label (자동 감지 실패, 선택 항목)"
+        read -rp "     입력하세요 (Enter=건너뜀): " val
+      fi
     fi
-  fi
+
+    # 경로 검증
+    if [[ -n "$vtype" && -n "$val" ]]; then
+      if _check_path "$val" "$vtype"; then
+        ok "검증 완료: $val"
+        break
+      else
+        echo -e "  ${C_YLW}[경고]${C_NC}  $(_check_msg "$vtype")"
+        echo -e "         경로: $val"
+        read -rp "     다시 입력하시겠습니까? [y=재입력 / Enter=이대로 사용]: " retry
+        [[ "${retry,,}" == "y" ]] && val="" || break
+      fi
+    else
+      break
+    fi
+  done
+
   eval "$varname=\"\$val\""
 }
 
@@ -351,13 +394,13 @@ hdr "Step 2 — 탐지 결과 확인"
 echo "  감지된 경로를 확인하세요. Enter=유지, 새 값 입력=변경"
 echo ""
 
-confirm_or_input "ORACLE_HOME " ORACLE_HOME "$ORACLE_HOME"
-confirm_or_input "DOMAIN_HOME " DOMAIN_HOME "$DOMAIN_HOME"
-confirm_or_input "OHS htdocs     " OHS_HTDOCS      "$OHS_HTDOCS"
+confirm_or_input "ORACLE_HOME    " ORACLE_HOME "$ORACLE_HOME" "true" "oas_home"
+confirm_or_input "DOMAIN_HOME    " DOMAIN_HOME "$DOMAIN_HOME" "true" "oas_domain"
+confirm_or_input "OHS htdocs     " OHS_HTDOCS  "$OHS_HTDOCS"  "true" "dir"
 if [[ "$DEPLOY_OPT" == "b" ]]; then
-  confirm_or_input "OHS httpd.conf " OHS_CONF        "$OHS_CONF"
-  confirm_or_input "OHS 포트       " OHS_PORT        "$OHS_PORT"
-  confirm_or_input "OHS 컴포넌트명 " OHS_COMPONENT   "$OHS_COMPONENT"
+  confirm_or_input "OHS httpd.conf " OHS_CONF      "$OHS_CONF"      "true" "file"
+  confirm_or_input "OHS 포트       " OHS_PORT      "$OHS_PORT"      "true" ""
+  confirm_or_input "OHS 컴포넌트명 " OHS_COMPONENT "$OHS_COMPONENT" "true" ""
 fi
 
 # 설치 디렉터리: ORACLE_BASE 기반으로 제안
@@ -367,8 +410,8 @@ DEFAULT_BACKUP_DIR="$ORACLE_BASE/oas-backup/oas-snapshots"
 
 if [[ "$DEPLOY_OPT" == "b" ]]; then
   echo ""
-  confirm_or_input "스크립트 설치 경로" METRICS_INSTALL "$DEFAULT_METRICS_DIR"
-  confirm_or_input "스냅샷 저장 경로  " BACKUP_INSTALL  "$DEFAULT_BACKUP_DIR"
+  confirm_or_input "스크립트 설치 경로" METRICS_INSTALL "$DEFAULT_METRICS_DIR" "true" ""
+  confirm_or_input "스냅샷 저장 경로  " BACKUP_INSTALL  "$DEFAULT_BACKUP_DIR"  "true" ""
 fi
 
 # 최종 확인
