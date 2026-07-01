@@ -638,14 +638,95 @@ hr { border:none; border-top:1px solid var(--border); margin:20px 0; }
       </div>
     </div>
 
-    <!-- 미설정 안내 -->
-    <div id="usage-setup-banner" class="alert a-warn" style="display:none;margin-bottom:16px;">
-      <div>
-        <strong>⚙ Usage Tracking DB 미설정</strong>
-        <div class="fz11" id="usage-setup-hint" style="margin-top:4px;"></div>
-        <div class="fz11" style="margin-top:6px;opacity:.8;">
-          OAS Usage Tracking 활성화: <code>NQSConfig.INI</code> → <code>[USAGE_TRACKING] ENABLE = YES</code><br>
-          metrics_server.py 환경변수: <code>OAS_UT_USER</code> · <code>OAS_UT_PASS</code> · <code>OAS_UT_DSN</code>
+    <!-- 미활성화 안내 -->
+    <div id="usage-setup-banner" style="display:none;margin-bottom:16px;background:var(--warn-bg,#fffbe6);border:1px solid var(--warn-border,#ffe58f);border-radius:8px;padding:16px 20px;">
+      <div style="width:100%;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:2px;">📊 Usage Tracking이 활성화되어 있지 않습니다</div>
+        <div class="fz11 col-r" id="usage-setup-hint" style="margin-top:2px;margin-bottom:12px;"></div>
+
+        <!-- 경고 -->
+        <div style="background:rgba(255,0,0,.06);border-left:3px solid var(--red,#e53);padding:8px 10px;border-radius:4px;margin-bottom:14px;">
+          <div style="font-weight:600;font-size:12px;margin-bottom:2px;">⚠ NQSConfig.INI 직접 편집 금지</div>
+          <div class="fz11" style="line-height:1.7;opacity:.85;">
+            NQSConfig.INI는 OAS Console이 관리하는 <strong>파생 파일</strong>입니다.<br>
+            직접 편집한 내용은 Console에서 설정을 저장·활성화하는 순간 <strong>덮어써집니다.</strong><br>
+            반드시 아래 OAS Console을 통해 설정하세요.
+          </div>
+        </div>
+
+        <!-- Step 1: OAS Console 설정 -->
+        <div style="margin-bottom:12px;">
+          <div style="font-weight:600;margin-bottom:6px;">① OAS Console에서 Usage Tracking 활성화</div>
+          <div class="fz11" style="line-height:1.9;opacity:.9;">
+            <span style="display:inline-block;background:#e8f4fd;border-radius:3px;padding:0 4px;font-family:monospace;">http://서버포트/ui</span> 접속<br>
+            → 우측 상단 Navigator(≡) → <strong>Console</strong><br>
+            → <strong>Advanced System Settings</strong><br>
+            → <strong>Usage Tracking</strong><br>
+            → <strong>Enable Usage Tracking</strong> 체크
+          </div>
+
+          <div style="margin-top:8px;" class="fz11">활성화 후 아래 파라미터를 설정합니다:</div>
+          <table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:11px;">
+            <thead>
+              <tr style="background:rgba(0,0,0,.05);">
+                <th style="padding:4px 8px;text-align:left;border:1px solid rgba(0,0,0,.1);">파라미터</th>
+                <th style="padding:4px 8px;text-align:left;border:1px solid rgba(0,0,0,.1);">형식</th>
+                <th style="padding:4px 8px;text-align:left;border:1px solid rgba(0,0,0,.1);">예시</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);">Connection Pool</td>
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);opacity:.8;">&lt;DB명&gt;.&lt;Connection Pool명&gt;</td>
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);font-family:monospace;">UsageTracking.UTConnectionPool</td>
+              </tr>
+              <tr style="background:rgba(0,0,0,.02);">
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);">Init Block Table</td>
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);opacity:.8;">&lt;DB명&gt;.&lt;스키마&gt;.&lt;테이블&gt;</td>
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);font-family:monospace;">UsageTracking.UT_Schema.InitBlockInfo</td>
+              </tr>
+              <tr>
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);">Physical Query Table</td>
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);opacity:.8;">&lt;DB명&gt;.&lt;스키마&gt;.&lt;테이블&gt;</td>
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);font-family:monospace;">UsageTracking.UT_Schema.PhysicalQueries</td>
+              </tr>
+              <tr style="background:rgba(0,0,0,.02);">
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);">Logical Query Table</td>
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);opacity:.8;">&lt;DB명&gt;.&lt;스키마&gt;.&lt;테이블&gt;</td>
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);font-family:monospace;">UsageTracking.UT_Schema.LogicalQueries</td>
+              </tr>
+              <tr>
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);">Max Rows</td>
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);opacity:.8;">1 ~ 100,000 (0 = 무제한)</td>
+                <td style="padding:4px 8px;border:1px solid rgba(0,0,0,.1);font-family:monospace;">10000</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="fz11" style="margin-top:6px;opacity:.7;">
+            ※ OBIEE 12c에서 업그레이드한 경우 기존 설정이 유지되나 Console에 값이 표시되지 않을 수 있습니다.
+          </div>
+        </div>
+
+        <!-- Step 2: metrics_server.py 환경변수 -->
+        <div style="margin-bottom:12px;">
+          <div style="font-weight:600;margin-bottom:6px;">② metrics_server.py DB 연결 환경변수 설정</div>
+          <div class="fz11" style="line-height:1.9;opacity:.9;">
+            <code>start.sh</code> 에서 아래 환경변수 export 후 metrics_server.py 재기동:<br>
+            <code>OAS_UT_USER</code>=&lt;스키마계정&gt; &nbsp;
+            <code>OAS_UT_PASS</code>=&lt;password&gt; &nbsp;
+            <code>OAS_UT_DSN</code>=localhost:1521/&lt;service_name&gt;
+          </div>
+        </div>
+
+        <!-- 참고 문서 -->
+        <div style="padding-top:8px;border-top:1px solid rgba(0,0,0,.1);">
+          <div class="fz11" style="opacity:.7;">
+            📖 참고 문서:
+            <a href="https://docs.oracle.com/en/middleware/bi/analytics-server/administer-oas/set-usage-tracking-parameters.html"
+               target="_blank" style="color:inherit;">
+              Oracle Analytics Server Administration Guide — Set Usage Tracking Parameters
+            </a>
+          </div>
         </div>
       </div>
     </div>

@@ -23,17 +23,19 @@ BIND = '127.0.0.1'   # OHS 프록시 사용: localhost 전용
                       # 직접 접근 원하면 '0.0.0.0' 으로 변경
 
 # ── 백업 설정 (환경에 맞게 수정) ──────────────────────────
-BACKUP_DIR    = '/backup/oas-snapshots'
-BACKUP_SCRIPT = '/opt/oas-metrics/backup.sh'
+BACKUP_DIR    = '/u01/oas-backup/snapshots'
+BACKUP_SCRIPT = '/u01/oas-scripts/oas-metrics/backup.sh'
 # ─────────────────────────────────────────────────────────
 
 # ── Usage Tracking DB 연결 설정 ───────────────────────────
-# OAS Usage Tracking 활성화 필요: NQSConfig.INI [USAGE_TRACKING] ENABLE = YES
+# OAS Console → Advanced System Settings → Usage Tracking 에서 활성화 후 설정
 # 환경변수로 주입하거나 아래 값을 직접 수정
-DB_USER  = os.environ.get('OAS_UT_USER',  'biplatform')   # Usage Tracking 스키마 계정
-DB_PASS  = os.environ.get('OAS_UT_PASS',  '')             # 비밀번호
-DB_DSN   = os.environ.get('OAS_UT_DSN',   '')             # host:port/service_name
-DB_TABLE = os.environ.get('OAS_UT_TABLE', 'S_NQ_ACCT')   # Usage Tracking 테이블명
+DB_USER  = os.environ.get('OAS_UT_USER',  '')   # Usage Tracking DB 계정
+DB_PASS  = os.environ.get('OAS_UT_PASS',  '')   # 비밀번호
+DB_DSN   = os.environ.get('OAS_UT_DSN',   '')   # host:port/service_name
+# OAS Console 에서 지정한 Logical Query Logging Table 의 실제 DB 테이블명
+# 예) BIPLATFORM.S_NQ_ACCT (OBIEE 호환) 또는 실제 스키마.테이블명
+DB_TABLE = os.environ.get('OAS_UT_TABLE', '')
 # ─────────────────────────────────────────────────────────
 
 # ── OAS 로그 파일 경로 (환경에 맞게 수정) ─────────────────
@@ -122,13 +124,15 @@ def _row_to_dict(cursor, row):
 
 
 def get_usage_stats(period_days=90, top_n=20):
-    """S_NQ_ACCT 테이블에서 사용량 통계 조회"""
-    if not DB_DSN or not DB_PASS:
+    """OAS LogicalQueries 테이블에서 사용량 통계 조회
+    SUCCESS_FLG: 0=성공, 1=타임아웃, 2=행제한초과, 3=기타오류
+    """
+    if not DB_DSN or not DB_PASS or not DB_TABLE:
         return {
             'configured': False,
             'error': 'DB 연결 정보 미설정',
-            'hint': ('metrics_server.py 상단의 DB_USER/DB_PASS/DB_DSN을 설정하거나 '
-                     'OAS_UT_USER / OAS_UT_PASS / OAS_UT_DSN 환경변수를 지정하세요.'),
+            'hint': ('OAS_UT_USER / OAS_UT_PASS / OAS_UT_DSN / OAS_UT_TABLE 환경변수를 설정하세요. '
+                     'OAS Console → Advanced System Settings → Usage Tracking 에서 활성화 필요.'),
         }
 
     try:
@@ -142,11 +146,11 @@ def get_usage_stats(period_days=90, top_n=20):
 
         # 1. 요약 통계
         cur.execute(f"""
-            SELECT COUNT(*)                                          AS total_queries,
-                   SUM(CASE WHEN SUCCESS_FLG = 0 THEN 1 ELSE 0 END) AS total_errors,
-                   COUNT(DISTINCT USER_NAME)                         AS unique_users,
-                   COUNT(DISTINCT SAW_SRC_PATH)                      AS unique_reports,
-                   ROUND(AVG(TOTAL_TIME_SEC), 2)                     AS avg_sec
+            SELECT COUNT(*)                                           AS total_queries,
+                   SUM(CASE WHEN SUCCESS_FLG != 0 THEN 1 ELSE 0 END) AS total_errors,
+                   COUNT(DISTINCT USER_NAME)                          AS unique_users,
+                   COUNT(DISTINCT SAW_SRC_PATH)                       AS unique_reports,
+                   ROUND(AVG(TOTAL_TIME_SEC), 2)                      AS avg_sec
             FROM {tbl}
             WHERE START_TS >= SYSDATE - :days
         """, {'days': period_days})
@@ -160,7 +164,7 @@ def get_usage_stats(period_days=90, top_n=20):
                    ROUND(AVG(TOTAL_TIME_SEC), 2)                         AS avg_sec,
                    ROUND(MAX(TOTAL_TIME_SEC), 2)                         AS max_sec,
                    COUNT(DISTINCT USER_NAME)                              AS unique_users,
-                   SUM(CASE WHEN SUCCESS_FLG = 0 THEN 1 ELSE 0 END)      AS errors,
+                   SUM(CASE WHEN SUCCESS_FLG != 0 THEN 1 ELSE 0 END)      AS errors,
                    MAX(START_TS)                                          AS last_used
             FROM {tbl}
             WHERE START_TS >= SYSDATE - :days
@@ -180,7 +184,7 @@ def get_usage_stats(period_days=90, top_n=20):
                    COUNT(*)                        AS hit_count
             FROM {tbl}
             WHERE START_TS >= SYSDATE - :days
-              AND SUCCESS_FLG = 1
+              AND SUCCESS_FLG = 0
               AND SAW_SRC_PATH IS NOT NULL
               AND TOTAL_TIME_SEC > 0
             GROUP BY SAW_SRC_PATH, SAW_DASHBOARD
@@ -209,7 +213,7 @@ def get_usage_stats(period_days=90, top_n=20):
         cur.execute(f"""
             SELECT TO_CHAR(TRUNC(START_TS), 'YYYY-MM-DD') AS day,
                    COUNT(*)                                AS total,
-                   SUM(CASE WHEN SUCCESS_FLG = 0 THEN 1 ELSE 0 END) AS errors
+                   SUM(CASE WHEN SUCCESS_FLG != 0 THEN 1 ELSE 0 END) AS errors
             FROM {tbl}
             WHERE START_TS >= SYSDATE - 30
             GROUP BY TRUNC(START_TS)
@@ -220,14 +224,14 @@ def get_usage_stats(period_days=90, top_n=20):
 
         # 6. Subject Area(주제 영역)별 사용 현황
         cur.execute(f"""
-            SELECT SUBJECT_AREA                   AS subject_area,
+            SELECT SUBJECT_AREA_NAME              AS subject_area,
                    COUNT(*)                       AS hit_count,
                    COUNT(DISTINCT USER_NAME)      AS unique_users,
                    ROUND(AVG(TOTAL_TIME_SEC), 2)  AS avg_sec
             FROM {tbl}
             WHERE START_TS >= SYSDATE - :days
-              AND SUBJECT_AREA IS NOT NULL
-            GROUP BY SUBJECT_AREA
+              AND SUBJECT_AREA_NAME IS NOT NULL
+            GROUP BY SUBJECT_AREA_NAME
             ORDER BY COUNT(*) DESC
             FETCH FIRST 10 ROWS ONLY
         """, {'days': period_days})
@@ -623,7 +627,7 @@ if __name__ == '__main__':
     server = HTTPServer((BIND, PORT), Handler)
     print(f'[OAS Metrics] 시작: http://{BIND}:{PORT}')
     print(f'  GET  /metrics   → 시스템 리소스')
-    print(f'  GET  /usage     → Usage Tracking 통계 (?period=90&top=20)  [DB: {DB_DSN or "미설정"}]')
+    print(f'  GET  /usage     → Usage Tracking 통계 (?period=90&top=20)  [DB: {DB_DSN or "미설정"}, TABLE: {DB_TABLE or "미설정"}]')
     print(f'  GET  /version   → OAS 버전 자동 감지')
     print(f'  GET  /logs      → OAS 로그 파싱  (?file=obips&level=ERROR&lines=500)')
     print(f'  GET  /snapshots → 스냅샷 목록  (BACKUP_DIR: {BACKUP_DIR})')

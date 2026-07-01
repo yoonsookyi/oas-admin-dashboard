@@ -6,7 +6,7 @@
 set -e
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/backup/oas-snapshots"
+BACKUP_DIR="/u01/oas-backup/snapshots"
 DOMAIN_HOME="${DOMAIN_HOME:-/u01/oracle/config/domains/bi}"
 ORACLE_INSTANCE="${ORACLE_INSTANCE:-/u01/oracle/config/OracleBIApplication/coreapplication}"
 
