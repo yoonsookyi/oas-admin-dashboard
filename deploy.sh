@@ -289,8 +289,9 @@ detect_oracle_base() {
 _check_path() {
   local val="$1" vtype="$2"
   case "$vtype" in
-    oas_home)   [[ -f "$val/bitools/bin/start.sh" ]]        ;;
-    oas_domain) [[ -d "$val/config/fmwconfig/biconfig" ]]   ;;
+    oas_home)   [[ -d "$val/OPatch" ]]                       ;;
+    oas_domain) [[ -d "$val/config/fmwconfig/biconfig" ]] &&
+                [[ -f "$val/bitools/bin/start.sh" ]]         ;;
     dir)        [[ -d "$val" ]]                              ;;
     file)       [[ -f "$val" ]]                              ;;
     *)          return 0                                     ;;
@@ -299,8 +300,8 @@ _check_path() {
 
 _check_msg() {
   case "$1" in
-    oas_home)   echo "OAS ORACLE_HOME이 아닙니다 (bitools/bin/start.sh 없음)" ;;
-    oas_domain) echo "OAS BI 도메인이 아닙니다 (config/fmwconfig/biconfig 없음)" ;;
+    oas_home)   echo "OAS ORACLE_HOME이 아닙니다 (OPatch 디렉터리 없음)" ;;
+    oas_domain) echo "OAS BI 도메인이 아닙니다 (config/fmwconfig/biconfig 또는 bitools/bin/start.sh 없음)" ;;
     dir)        echo "디렉터리가 존재하지 않습니다" ;;
     file)       echo "파일이 존재하지 않습니다" ;;
   esac
@@ -583,8 +584,8 @@ fi
 # ── Step 9: OHS 재시작 ────────────────────────────────────
 hdr "Step 9 — OHS 재시작"
 
-BITOOLS_STOP="$ORACLE_HOME/bitools/bin/stop.sh"
-BITOOLS_START="$ORACLE_HOME/bitools/bin/start.sh"
+BITOOLS_STOP="$DOMAIN_HOME/bitools/bin/stop.sh"
+BITOOLS_START="$DOMAIN_HOME/bitools/bin/start.sh"
 
 read -rp "  OAS를 지금 재시작하시겠습니까? (stop → start) [y/N]: " restart_ohs
 if [[ "${restart_ohs,,}" == "y" ]]; then
