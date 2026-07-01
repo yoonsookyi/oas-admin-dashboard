@@ -540,61 +540,31 @@ fi
 # ── Step 9: OHS 재시작 ────────────────────────────────────
 hdr "Step 9 — OHS 재시작"
 
-# 버전별 재시작 방법 판별
-#   OBIEE 11g / 구버전 Oracle Middleware : opmnctl 사용
-#   OBIEE 12c / OAS                      : $ORACLE_HOME/bitools/bin/stop.sh · start.sh 사용
-OPMNCTL=$(command -v opmnctl 2>/dev/null || true)
-BITOOLS_START="$ORACLE_HOME/bitools/bin/start.sh"
 BITOOLS_STOP="$ORACLE_HOME/bitools/bin/stop.sh"
-BITOOLS_STATUS="$ORACLE_HOME/bitools/bin/status.sh"
+BITOOLS_START="$ORACLE_HOME/bitools/bin/start.sh"
 
-if [[ -n "$OPMNCTL" ]]; then
-  info "감지: OBIEE 11g / 구버전 Middleware (opmnctl)"
-  RESTART_CMD="opmnctl"
-elif [[ -f "$BITOOLS_START" ]]; then
-  info "감지: OBIEE 12c / OAS (bitools)"
-  RESTART_CMD="bitools"
-else
-  info "재시작 도구를 자동 감지하지 못했습니다."
-  RESTART_CMD="manual"
-fi
-
-read -rp "  OHS를 지금 재시작하시겠습니까? [y/N]: " restart_ohs
+read -rp "  OAS를 지금 재시작하시겠습니까? (stop → start) [y/N]: " restart_ohs
 if [[ "${restart_ohs,,}" == "y" ]]; then
-  case "$RESTART_CMD" in
-    opmnctl)
-      "$OPMNCTL" restartproc ias-component="$OHS_COMPONENT"
-      sleep 3
-      ;;
-    bitools)
-      info "OAS 전체 서비스를 재시작합니다 (stop → start)..."
-      "$BITOOLS_STOP" && sleep 5 && "$BITOOLS_START"
-      sleep 10
-      ;;
-    manual)
-      err "재시작 도구를 찾을 수 없습니다. 아래 중 해당하는 방법으로 수동 재시작하세요:"
-      info "  [OBIEE 11g]  opmnctl restartproc ias-component=$OHS_COMPONENT"
-      info "  [OBIEE 12c / OAS]  \$ORACLE_HOME/bitools/bin/stop.sh && \$ORACLE_HOME/bitools/bin/start.sh"
-      ;;
-  esac
-
-  if [[ "$RESTART_CMD" != "manual" ]]; then
+  if [[ -f "$BITOOLS_STOP" && -f "$BITOOLS_START" ]]; then
+    info "OAS 서비스 중지 중..."
+    "$BITOOLS_STOP"
+    sleep 5
+    info "OAS 서비스 기동 중..."
+    "$BITOOLS_START"
+    sleep 10
     if curl -sf "http://localhost:${OHS_PORT}/sysmgmt/metrics" >/dev/null; then
       ok "재시작 완료 — ProxyPass 동작 확인"
     else
       err "ProxyPass 응답 없음. OHS 설정 파일을 점검하세요: $OHS_CONF"
     fi
+  else
+    err "bitools 를 찾을 수 없습니다: $ORACLE_HOME/bitools/bin/"
+    info "수동으로 재시작하세요:"
+    info "  $BITOOLS_STOP && $BITOOLS_START"
   fi
 else
   info "재시작을 건너뜁니다. 배포 후 아래 명령으로 수동 재시작하세요:"
-  case "$RESTART_CMD" in
-    opmnctl) info "  opmnctl restartproc ias-component=$OHS_COMPONENT" ;;
-    bitools) info "  $BITOOLS_STOP && $BITOOLS_START" ;;
-    manual)
-      info "  [OBIEE 11g]  opmnctl restartproc ias-component=$OHS_COMPONENT"
-      info "  [OBIEE 12c / OAS]  \$ORACLE_HOME/bitools/bin/stop.sh && \$ORACLE_HOME/bitools/bin/start.sh"
-      ;;
-  esac
+  info "  $BITOOLS_STOP && $BITOOLS_START"
 fi
 
 # ── 완료 ──────────────────────────────────────────────────
