@@ -105,57 +105,6 @@ detect_oracle_home() {
   echo ""
 }
 
-# ORACLE_INSTANCE 탐지
-detect_oracle_instance() {
-  local val="${ORACLE_INSTANCE:-}"
-
-  # ① 환경변수
-  [[ -n "$val" && -d "$val/diagnostics" ]] && echo "$val" && return
-
-  # ② NQSConfig.INI 위치로 역추산
-  #    경로 구조: $ORACLE_INSTANCE/config/OracleBIServerComponent/.../NQSConfig.INI
-  local nqs
-  nqs=$(find $SEARCH_ROOTS -maxdepth 10 -name "NQSConfig.INI" \
-        -not -path "*/backup/*" -not -path "*/tmp/*" 2>/dev/null | head -1)
-  if [[ -n "$nqs" ]]; then
-    # NQSConfig.INI → .../config/OracleBIServerComponent/xxx/NQSConfig.INI
-    # ORACLE_INSTANCE = config의 두 단계 위
-    local inst
-    inst=$(dirname "$(dirname "$(dirname "$nqs")")")
-    [[ -d "$inst/diagnostics" ]] && echo "$inst" && return
-  fi
-
-  # ③ opmn.xml 위치로 탐지
-  local opmn_xml
-  opmn_xml=$(find / -maxdepth 10 -name "opmn.xml" \
-             -not -path "*/backup/*" 2>/dev/null | head -1)
-  if [[ -n "$opmn_xml" ]]; then
-    local inst
-    inst=$(dirname "$(dirname "$opmn_xml")")
-    [[ -d "$inst/diagnostics" ]] && echo "$inst" && return
-  fi
-
-  # ④ 실행 프로세스에서 ORACLE_INSTANCE 추출
-  local proc_inst
-  proc_inst=$(ps -eo args 2>/dev/null | grep -v grep \
-    | grep -oE 'ORACLE_INSTANCE=[^ ]+' | head -1 | cut -d= -f2)
-  [[ -n "$proc_inst" && -d "$proc_inst" ]] && echo "$proc_inst" && return
-
-  # ⑤ ORACLE_HOME 기준 상대 경로 탐색
-  local oh="${ORACLE_HOME:-}"
-  if [[ -n "$oh" ]]; then
-    local base
-    base=$(dirname "$(dirname "$oh")")   # 보통 $base/products/OAS 구조
-    for p in \
-      "$base/config/OracleBIApplication/coreapplication" \
-      "$base/instance/OracleBIApplication/coreapplication"; do
-      [[ -d "$p/diagnostics" ]] && echo "$p" && return
-    done
-  fi
-
-  echo ""
-}
-
 # DOMAIN_HOME 탐지
 detect_domain_home() {
   local val="${DOMAIN_HOME:-}"
@@ -210,15 +159,15 @@ detect_domain_home() {
 }
 
 # OHS htdocs 탐지
+# OAS(FMW 기반): DOMAIN_HOME/config/fmwconfig/components/OHS/instances/ohs1/htdocs
 detect_ohs_htdocs() {
-  local oi="${ORACLE_INSTANCE:-}"
+  local dh="${DOMAIN_HOME:-}"
 
-  # ① ORACLE_INSTANCE 하위 직접 탐색
-  if [[ -n "$oi" ]]; then
+  # ① OAS 표준 경로 (DOMAIN_HOME 기반)
+  if [[ -n "$dh" ]]; then
     for p in \
-      "$oi/OHS/ohs1/htdocs" \
-      "$oi/config/OHS/ohs1/htdocs" \
-      "$oi/OHS/ohs2/htdocs"; do
+      "$dh/config/fmwconfig/components/OHS/instances/ohs1/htdocs" \
+      "$dh/config/fmwconfig/components/OHS/instances/ohs2/htdocs"; do
       [[ -d "$p" ]] && echo "$p" && return
     done
   fi
@@ -233,33 +182,33 @@ detect_ohs_htdocs() {
     [[ -n "$docroot" && -d "$docroot" ]] && echo "$docroot" && return
   fi
 
-  # ③ 시스템 전체 htdocs 탐색 (OHS 특성 파일 함께 있는 곳)
-  find $SEARCH_ROOTS -maxdepth 10 -type d -name "htdocs" \
+  # ③ 시스템 전체 탐색 (OHS 특성 파일 함께 있는 곳)
+  find $SEARCH_ROOTS -maxdepth 12 -type d -name "htdocs" \
        -not -path "*/backup/*" -not -path "*/tmp/*" 2>/dev/null \
     | while read -r d; do
-        # 같은 레벨에 OHS 관련 파일이 있는지 확인
-        [[ -f "$(dirname "$d")/conf/httpd.conf" ]] && echo "$d" && break
+        [[ -f "$(dirname "$d")/conf/httpd.conf" || \
+           -f "$(dirname "$d")/httpd.conf" ]] && echo "$d" && break
       done | head -1
 
   echo ""
 }
 
 # OHS httpd.conf 탐지
+# OAS(FMW 기반): DOMAIN_HOME/config/fmwconfig/components/OHS/instances/ohs1/httpd.conf
 detect_ohs_conf() {
-  local oi="${ORACLE_INSTANCE:-}"
+  local dh="${DOMAIN_HOME:-}"
 
-  # ① ORACLE_INSTANCE 하위 직접 탐색
-  if [[ -n "$oi" ]]; then
+  # ① OAS 표준 경로 (DOMAIN_HOME 기반)
+  if [[ -n "$dh" ]]; then
     for p in \
-      "$oi/OHS/ohs1/conf/httpd.conf" \
-      "$oi/config/OHS/ohs1/conf/httpd.conf" \
-      "$oi/OHS/ohs2/conf/httpd.conf"; do
+      "$dh/config/fmwconfig/components/OHS/instances/ohs1/httpd.conf" \
+      "$dh/config/fmwconfig/components/OHS/instances/ohs2/httpd.conf"; do
       [[ -f "$p" ]] && echo "$p" && return
     done
   fi
 
-  # ② 시스템 전체 탐색 (OHS 특성: mod_ohs 로드 구문 포함)
-  find $SEARCH_ROOTS -maxdepth 10 -name "httpd.conf" \
+  # ② 시스템 전체 탐색 (OHS 특성: mod_ohs 또는 OracleHTTPServer 구문 포함)
+  find $SEARCH_ROOTS -maxdepth 12 -name "httpd.conf" \
        -not -path "*/backup/*" -not -path "*/tmp/*" 2>/dev/null \
     | while read -r f; do
         grep -qE "mod_ohs|ohs_module|OracleHTTPServer" "$f" 2>/dev/null \
@@ -283,22 +232,28 @@ detect_ohs_port() {
 }
 
 # OHS 컴포넌트명 탐지 (opmnctl 재시작에 사용)
+# OAS(FMW 기반): DOMAIN_HOME/config/fmwconfig/components/OHS/instances/ 디렉터리명
 detect_ohs_component() {
-  local oi="${ORACLE_INSTANCE:-}"
-  if [[ -n "$oi" ]]; then
-    # OHS 디렉터리명으로 추정
+  local dh="${DOMAIN_HOME:-}"
+
+  # ① OAS 표준 경로에서 인스턴스 디렉터리명 추출
+  if [[ -n "$dh" ]]; then
     local comp
-    comp=$(ls -d "$oi/OHS/"ohs* 2>/dev/null | head -1 | xargs -I{} basename {})
+    comp=$(ls -d "$dh/config/fmwconfig/components/OHS/instances/"ohs* 2>/dev/null \
+           | head -1 | xargs -I{} basename {} 2>/dev/null)
     [[ -n "$comp" ]] && echo "$comp" && return
   fi
-  # opmn.xml에서 추출
+
+  # ② opmn.xml에서 추출 (OBIEE 11g 호환)
   local opmn_xml
-  opmn_xml=$(find / -maxdepth 10 -name "opmn.xml" 2>/dev/null | head -1)
+  opmn_xml=$(find $SEARCH_ROOTS -maxdepth 12 -name "opmn.xml" \
+             -not -path "*/backup/*" 2>/dev/null | head -1)
   if [[ -n "$opmn_xml" ]]; then
     grep -oE 'id="ohs[^"]*"' "$opmn_xml" 2>/dev/null \
       | head -1 | sed 's/id="//;s/"//'
     return
   fi
+
   echo "ohs1"   # 기본값
 }
 
@@ -367,7 +322,6 @@ echo "  탐지 중... (잠시 대기)"
 echo ""
 
 ORACLE_HOME=$(detect_oracle_home)
-ORACLE_INSTANCE=$(detect_oracle_instance)
 DOMAIN_HOME=$(detect_domain_home)
 OHS_HTDOCS=$(detect_ohs_htdocs)
 OHS_CONF=$(detect_ohs_conf)
@@ -376,7 +330,6 @@ OHS_COMPONENT=$(detect_ohs_component)
 
 # 탐지 소스 표시
 [[ -n "$ORACLE_HOME"     ]] && src "ORACLE_HOME     ← $ORACLE_HOME"     || src "ORACLE_HOME     ← 미감지"
-[[ -n "$ORACLE_INSTANCE" ]] && src "ORACLE_INSTANCE ← $ORACLE_INSTANCE" || src "ORACLE_INSTANCE ← 미감지"
 [[ -n "$DOMAIN_HOME"     ]] && src "DOMAIN_HOME     ← $DOMAIN_HOME"     || src "DOMAIN_HOME     ← 미감지"
 [[ -n "$OHS_HTDOCS"      ]] && src "OHS htdocs      ← $OHS_HTDOCS"      || src "OHS htdocs      ← 미감지"
 [[ -n "$OHS_CONF"        ]] && src "OHS httpd.conf  ← $OHS_CONF"        || src "OHS httpd.conf  ← 미감지"
@@ -388,9 +341,8 @@ hdr "Step 2 — 탐지 결과 확인"
 echo "  감지된 경로를 확인하세요. Enter=유지, 새 값 입력=변경"
 echo ""
 
-confirm_or_input "ORACLE_HOME    " ORACLE_HOME     "$ORACLE_HOME"
-confirm_or_input "ORACLE_INSTANCE" ORACLE_INSTANCE "$ORACLE_INSTANCE"
-confirm_or_input "DOMAIN_HOME    " DOMAIN_HOME     "$DOMAIN_HOME"
+confirm_or_input "ORACLE_HOME " ORACLE_HOME "$ORACLE_HOME"
+confirm_or_input "DOMAIN_HOME " DOMAIN_HOME "$DOMAIN_HOME"
 confirm_or_input "OHS htdocs     " OHS_HTDOCS      "$OHS_HTDOCS"
 if [[ "$DEPLOY_OPT" == "b" ]]; then
   confirm_or_input "OHS httpd.conf " OHS_CONF        "$OHS_CONF"
@@ -412,9 +364,8 @@ fi
 # 최종 확인
 echo ""
 echo "  ┌─ 최종 배포 설정 ──────────────────────────────────┐"
-printf "  │  %-20s %s\n" "ORACLE_HOME"     "$ORACLE_HOME"
-printf "  │  %-20s %s\n" "ORACLE_INSTANCE" "$ORACLE_INSTANCE"
-printf "  │  %-20s %s\n" "DOMAIN_HOME"     "$DOMAIN_HOME"
+printf "  │  %-20s %s\n" "ORACLE_HOME"  "$ORACLE_HOME"
+printf "  │  %-20s %s\n" "DOMAIN_HOME"  "$DOMAIN_HOME"
 printf "  │  %-20s %s\n" "OHS htdocs"      "$OHS_HTDOCS"
 if [[ "$DEPLOY_OPT" == "b" ]]; then
   printf "  │  %-20s %s\n" "OHS httpd.conf"  "$OHS_CONF"
@@ -522,7 +473,6 @@ fi
 cat > "$METRICS_INSTALL/start.sh" <<STARTSH
 #!/bin/bash
 export ORACLE_HOME=$ORACLE_HOME
-export ORACLE_INSTANCE=$ORACLE_INSTANCE
 export DOMAIN_HOME=$DOMAIN_HOME
 
 $UT_EXPORTS

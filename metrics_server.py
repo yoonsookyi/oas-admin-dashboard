@@ -38,26 +38,25 @@ DB_DSN   = os.environ.get('OAS_UT_DSN',   '')   # host:port/service_name
 DB_TABLE = os.environ.get('OAS_UT_TABLE', '')
 # ─────────────────────────────────────────────────────────
 
-# ── OAS 로그 파일 경로 (환경에 맞게 수정) ─────────────────
-# ORACLE_INSTANCE 또는 환경변수에서 자동 감지되지 않을 경우 직접 지정
-_OI = os.environ.get('ORACLE_INSTANCE', '')   # 예: /u01/oracle/config/OracleBIApplication/coreapplication
-_DH = os.environ.get('DOMAIN_HOME',    '')    # 예: /u01/oracle/config/domains/bi
+# ── OAS 로그 파일 경로 ────────────────────────────────────
+# OAS(FMW 기반)는 모든 로그가 DOMAIN_HOME/diagnostics/logs/ 아래에 있음
+# OBIEE 11g의 ORACLE_INSTANCE 개념은 OAS에서 DOMAIN_HOME으로 통합됨
+_DH = os.environ.get('DOMAIN_HOME', '')   # 예: /u01/data/domains/bi
 
-def _oi(*parts): return os.path.join(_OI, *parts) if _OI else ''
 def _dh(*parts): return os.path.join(_DH, *parts) if _DH else ''
 
 LOG_FILES = {
-    'obips':    _oi('diagnostics','logs','OracleBIPresentationServicesComponent',
+    'obips':    _dh('diagnostics','logs','OracleBIPresentationServicesComponent',
                     'coreapplication_obips1','sawlog0.log'),
-    'nqserver': _oi('diagnostics','logs','OracleBIServerComponent',
+    'nqserver': _dh('diagnostics','logs','OracleBIServerComponent',
                     'coreapplication_obis1','nqserver.log'),
-    'nqquery':  _oi('diagnostics','logs','OracleBIServerComponent',
+    'nqquery':  _dh('diagnostics','logs','OracleBIServerComponent',
                     'coreapplication_obis1','nqquery.log'),
-    'obisch':   _oi('diagnostics','logs','OracleBISchedulerComponent',
+    'obisch':   _dh('diagnostics','logs','OracleBISchedulerComponent',
                     'coreapplication_obisch1','obisch1.log'),
     'domain':   _dh('servers','bi_server1','logs','bi_server1.log'),
     'admin':    _dh('servers','AdminServer','logs','AdminServer.log'),
-    'ohs':      _oi('diagnostics','logs','OracleHTTPServer','ohs1','error_log'),
+    'ohs':      _dh('diagnostics','logs','OracleHTTPServer','ohs1','error_log'),
 }
 LOG_DEFAULT_LINES = 500
 # ─────────────────────────────────────────────────────────
@@ -376,7 +375,7 @@ def get_logs(file_key='obips', level_filter='', max_lines=LOG_DEFAULT_LINES):
                 'availableKeys': list(LOG_FILES.keys())}
     if not os.path.exists(path):
         return {'error': f'로그 파일을 찾을 수 없습니다: {path}',
-                'path': path, 'hint': 'ORACLE_INSTANCE / DOMAIN_HOME 환경변수를 확인하세요'}
+                'path': path, 'hint': 'DOMAIN_HOME 환경변수를 확인하세요'}
 
     raw_lines = tail_file(path, max_lines)
     items = parse_log_lines(raw_lines, file_key)
@@ -632,7 +631,7 @@ if __name__ == '__main__':
     print(f'  GET  /logs      → OAS 로그 파싱  (?file=obips&level=ERROR&lines=500)')
     print(f'  GET  /snapshots → 스냅샷 목록  (BACKUP_DIR: {BACKUP_DIR})')
     print(f'  POST /snapshot  → 스냅샷 생성  (SCRIPT: {BACKUP_SCRIPT})')
-    print(f'  ORACLE_INSTANCE={_OI or "(미설정)"}')
+    print(f'  DOMAIN_HOME={_DH or "(미설정)"}')
     print(f'  DOMAIN_HOME    ={_DH or "(미설정)"}')
     try:
         server.serve_forever()
