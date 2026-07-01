@@ -45,6 +45,24 @@ _DH = os.environ.get('DOMAIN_HOME', '')   # 예: /u01/data/domains/bi
 
 def _dh(*parts): return os.path.join(_DH, *parts) if _DH else ''
 
+
+def _resolve_oracle_home():
+    """ORACLE_HOME을 환경변수 또는 DOMAIN_HOME/init-info/domain-info.xml에서 자동 추출"""
+    oh = os.environ.get('ORACLE_HOME', '')
+    if oh:
+        return oh
+    if _DH:
+        vf = os.path.join(_DH, 'init-info', 'domain-info.xml')
+        if os.path.exists(vf):
+            try:
+                with open(vf, encoding='utf-8', errors='ignore') as f:
+                    m = re.search(r'\bmwhome="([^"]+)"', f.read())
+                    if m:
+                        return m.group(1)
+            except Exception:
+                pass
+    return ''
+
 LOG_FILES = {
     'obips':    _dh('diagnostics','logs','OracleBIPresentationServicesComponent',
                     'coreapplication_obips1','sawlog0.log'),
@@ -398,7 +416,8 @@ def get_logs(file_key='obips', level_filter='', max_lines=LOG_DEFAULT_LINES):
 
 def get_oas_version():
     """OAS/OBIEE 버전을 서버 파일 시스템에서 자동 감지"""
-    oracle_home = os.environ.get('ORACLE_HOME', '')
+    oracle_home = _resolve_oracle_home()
+    domain_home = os.environ.get('DOMAIN_HOME', '')
 
     # 방법 1: OPatch lsinventory
     if oracle_home:
@@ -418,7 +437,7 @@ def get_oas_version():
                         if m:
                             return {'version': m.group(1), 'source': 'OPatch lsinventory',
                                     'oracleHome': oracle_home}
-            except Exception as e:
+            except Exception:
                 pass
 
     # 방법 2: Oracle Inventory XML
@@ -437,22 +456,7 @@ def get_oas_version():
             except Exception:
                 pass
 
-    # 방법 3: domain-info.xml (DOMAIN_HOME)
-    domain_home = os.environ.get('DOMAIN_HOME', '')
-    if domain_home:
-        vf = os.path.join(domain_home, 'domain-info.xml')
-        if os.path.exists(vf):
-            try:
-                with open(vf, encoding='utf-8', errors='ignore') as f:
-                    content = f.read()
-                m = re.search(r'<product-version>([^<]+)</product-version>', content)
-                if m:
-                    return {'version': m.group(1), 'source': 'domain-info.xml',
-                            'domainHome': domain_home}
-            except Exception:
-                pass
-
-    # 방법 4: bienv.sh 또는 setDomainEnv.sh 에서 버전 힌트 추출
+    # 방법 3: bienv.sh 또는 setDomainEnv.sh 에서 버전 힌트 추출
     for search_path in [oracle_home, domain_home]:
         if not search_path:
             continue

@@ -72,29 +72,38 @@ detect_oracle_home() {
     echo "$val"; return
   fi
 
-  # ② Oracle Inventory
+  # ② DOMAIN_HOME/init-info/domain-info.xml 의 mwhome 속성 (가장 신뢰도 높음)
+  #    OAS BI 도메인이 확정된 후 실행되므로 DOMAIN_HOME 변수 사용 가능
+  local dh="${DOMAIN_HOME:-}"
+  if [[ -n "$dh" && -f "$dh/init-info/domain-info.xml" ]]; then
+    local mwhome
+    mwhome=$(grep -oE 'mwhome="[^"]+"' "$dh/init-info/domain-info.xml" 2>/dev/null \
+             | head -1 | sed 's/mwhome="//;s/"//')
+    [[ -n "$mwhome" && -d "$mwhome" ]] && echo "$mwhome" && return
+  fi
+
+  # ③ Oracle Inventory
   local inv_home
   inv_home=$(_inventory_homes | head -1)
   [[ -n "$inv_home" ]] && echo "$inv_home" && return
 
-  # ③ 실행 프로세스 (nqserver, sawserver 등)
+  # ④ 실행 프로세스 (nqserver, sawserver 등)
   local proc_home
   proc_home=$(ps -eo args 2>/dev/null | grep -v grep \
     | grep -E "nqserver|sawserver|obisch" \
     | grep -oE '[^ ]+/OPatch' | sed 's|/OPatch||' | head -1)
   [[ -n "$proc_home" && -d "$proc_home" ]] && echo "$proc_home" && return
 
-  # ④ opmnctl 위치로 역추산
+  # ⑤ opmnctl 위치로 역추산
   local opmn_path
   opmn_path=$(command -v opmnctl 2>/dev/null || true)
   if [[ -n "$opmn_path" ]]; then
-    # opmnctl 은 보통 $ORACLE_HOME/opmn/bin/opmnctl
     local h
     h=$(dirname "$(dirname "$(dirname "$opmn_path")")")
     [[ -d "$h/OPatch" ]] && echo "$h" && return
   fi
 
-  # ⑤ 일반 경로 패턴
+  # ⑥ 일반 경로 패턴
   for p in \
     /u01/oracle/products/OAS   /u01/oracle/products/obiee \
     /u01/app/oracle/product/OAS /opt/oracle/OAS \
@@ -375,16 +384,16 @@ hdr "Step 1 — 환경 자동 탐지"
 echo "  탐지 중... (잠시 대기)"
 echo ""
 
-ORACLE_HOME=$(detect_oracle_home)
 DOMAIN_HOME=$(detect_domain_home)
+ORACLE_HOME=$(detect_oracle_home)   # domain-info.xml 추출을 위해 DOMAIN_HOME 탐지 후 실행
 OHS_HTDOCS=$(detect_ohs_htdocs)
 OHS_CONF=$(detect_ohs_conf)
 OHS_PORT=$(detect_ohs_port)
 OHS_COMPONENT=$(detect_ohs_component)
 
 # 탐지 소스 표시
-[[ -n "$ORACLE_HOME"     ]] && src "ORACLE_HOME     ← $ORACLE_HOME"     || src "ORACLE_HOME     ← 미감지"
 [[ -n "$DOMAIN_HOME"     ]] && src "DOMAIN_HOME     ← $DOMAIN_HOME"     || src "DOMAIN_HOME     ← 미감지"
+[[ -n "$ORACLE_HOME"     ]] && src "ORACLE_HOME     ← $ORACLE_HOME"     || src "ORACLE_HOME     ← 미감지"
 [[ -n "$OHS_HTDOCS"      ]] && src "OHS htdocs      ← $OHS_HTDOCS"      || src "OHS htdocs      ← 미감지"
 [[ -n "$OHS_CONF"        ]] && src "OHS httpd.conf  ← $OHS_CONF"        || src "OHS httpd.conf  ← 미감지"
 src "OHS 포트         ← $OHS_PORT"
@@ -395,8 +404,8 @@ hdr "Step 2 — 탐지 결과 확인"
 echo "  감지된 경로를 확인하세요. Enter=유지, 새 값 입력=변경"
 echo ""
 
-confirm_or_input "ORACLE_HOME    " ORACLE_HOME "$ORACLE_HOME" "true" "oas_home"
 confirm_or_input "DOMAIN_HOME    " DOMAIN_HOME "$DOMAIN_HOME" "true" "oas_domain"
+confirm_or_input "ORACLE_HOME    " ORACLE_HOME "$ORACLE_HOME" "true" "oas_home"
 confirm_or_input "OHS htdocs     " OHS_HTDOCS  "$OHS_HTDOCS"  "true" "dir"
 if [[ "$DEPLOY_OPT" == "b" ]]; then
   confirm_or_input "OHS httpd.conf " OHS_CONF      "$OHS_CONF"      "true" "file"
@@ -418,8 +427,8 @@ fi
 # 최종 확인
 echo ""
 echo "  ┌─ 최종 배포 설정 ──────────────────────────────────┐"
-printf "  │  %-20s %s\n" "ORACLE_HOME"  "$ORACLE_HOME"
 printf "  │  %-20s %s\n" "DOMAIN_HOME"  "$DOMAIN_HOME"
+printf "  │  %-20s %s\n" "ORACLE_HOME"  "$ORACLE_HOME"
 printf "  │  %-20s %s\n" "OHS htdocs"      "$OHS_HTDOCS"
 if [[ "$DEPLOY_OPT" == "b" ]]; then
   printf "  │  %-20s %s\n" "OHS httpd.conf"  "$OHS_CONF"
