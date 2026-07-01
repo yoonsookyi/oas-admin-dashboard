@@ -167,20 +167,9 @@ detect_domain_home() {
 }
 
 # OHS htdocs 탐지
-# OAS(FMW 기반): DOMAIN_HOME/config/fmwconfig/components/OHS/instances/ohs1/htdocs
+# 실행 중인 httpd.conf의 DocumentRoot가 가장 정확한 경로를 반환함
 detect_ohs_htdocs() {
-  local dh="${DOMAIN_HOME:-}"
-
-  # ① OAS 표준 경로 (DOMAIN_HOME 기반)
-  if [[ -n "$dh" ]]; then
-    for p in \
-      "$dh/config/fmwconfig/components/OHS/instances/ohs1/htdocs" \
-      "$dh/config/fmwconfig/components/OHS/instances/ohs2/htdocs"; do
-      [[ -d "$p" ]] && echo "$p" && return
-    done
-  fi
-
-  # ② httpd.conf의 DocumentRoot 추출
+  # ① 실행 중인 httpd.conf → DocumentRoot 추출 (가장 신뢰도 높음)
   local conf
   conf=$(detect_ohs_conf)
   if [[ -n "$conf" && -f "$conf" ]]; then
@@ -190,10 +179,14 @@ detect_ohs_htdocs() {
     [[ -n "$docroot" && -d "$docroot" ]] && echo "$docroot" && return
   fi
 
-  # ③ 시스템 전체 탐색 (OHS 특성 파일 함께 있는 곳)
+  # ② SEARCH_ROOTS 탐색 — template·sample·ORACLE_HOME 하위 제외
+  local oh="${ORACLE_HOME:-}"
   find $SEARCH_ROOTS -maxdepth 12 -type d -name "htdocs" \
-       -not -path "*/backup/*" -not -path "*/tmp/*" 2>/dev/null \
+       -not -path "*/template*" -not -path "*/sample*" \
+       -not -path "*/backup*"   -not -path "*/tmp*" 2>/dev/null \
     | while read -r d; do
+        # ORACLE_HOME 하위이면 제외 (템플릿 영역)
+        [[ -n "$oh" && "$d" == "$oh"* ]] && continue
         [[ -f "$(dirname "$d")/conf/httpd.conf" || \
            -f "$(dirname "$d")/httpd.conf" ]] && echo "$d" && break
       done | head -1
@@ -202,22 +195,32 @@ detect_ohs_htdocs() {
 }
 
 # OHS httpd.conf 탐지
-# OAS(FMW 기반): DOMAIN_HOME/config/fmwconfig/components/OHS/instances/ohs1/httpd.conf
+# 실행 중인 httpd 프로세스의 -f 인자가 가장 정확한 경로를 반환함
 detect_ohs_conf() {
-  local dh="${DOMAIN_HOME:-}"
+  # ① 실행 중인 httpd 프로세스의 -f 옵션에서 추출 (가장 신뢰도 높음)
+  local proc_conf
+  proc_conf=$(ps -eo args 2>/dev/null | grep -v grep \
+    | grep -E "httpd|oracle_httpd" \
+    | grep -oE '\-f [^ ]+' | head -1 | awk '{print $2}')
+  [[ -n "$proc_conf" && -f "$proc_conf" ]] && echo "$proc_conf" && return
 
-  # ① OAS 표준 경로 (DOMAIN_HOME 기반)
-  if [[ -n "$dh" ]]; then
-    for p in \
-      "$dh/config/fmwconfig/components/OHS/instances/ohs1/httpd.conf" \
-      "$dh/config/fmwconfig/components/OHS/instances/ohs2/httpd.conf"; do
-      [[ -f "$p" ]] && echo "$p" && return
-    done
+  # ② ORACLE_HOME 하위 탐색 — template·sample 경로는 제외
+  local oh="${ORACLE_HOME:-}"
+  if [[ -n "$oh" ]]; then
+    find "$oh" -maxdepth 8 -name "httpd.conf" \
+         -not -path "*/template*" -not -path "*/sample*" \
+         -not -path "*/backup*"   -not -path "*/tmp*" 2>/dev/null \
+      | while read -r f; do
+          grep -qE "mod_ohs|ohs_module|OracleHTTPServer" "$f" 2>/dev/null \
+            && echo "$f" && break
+        done | head -1
+    return
   fi
 
-  # ② 시스템 전체 탐색 (OHS 특성: mod_ohs 또는 OracleHTTPServer 구문 포함)
+  # ③ SEARCH_ROOTS 전체 탐색 — template·sample 경로 제외
   find $SEARCH_ROOTS -maxdepth 12 -name "httpd.conf" \
-       -not -path "*/backup/*" -not -path "*/tmp/*" 2>/dev/null \
+       -not -path "*/template*" -not -path "*/sample*" \
+       -not -path "*/backup*"   -not -path "*/tmp*" 2>/dev/null \
     | while read -r f; do
         grep -qE "mod_ohs|ohs_module|OracleHTTPServer" "$f" 2>/dev/null \
           && echo "$f" && break
@@ -240,19 +243,18 @@ detect_ohs_port() {
 }
 
 # OHS 컴포넌트명 탐지 (opmnctl 재시작에 사용)
-# OAS(FMW 기반): DOMAIN_HOME/config/fmwconfig/components/OHS/instances/ 디렉터리명
 detect_ohs_component() {
-  local dh="${DOMAIN_HOME:-}"
-
-  # ① OAS 표준 경로에서 인스턴스 디렉터리명 추출
-  if [[ -n "$dh" ]]; then
+  # ① 실행 중인 httpd.conf 경로에서 인스턴스명 추출
+  #    예: .../instances/ohs1/conf/httpd.conf → ohs1
+  local conf="${OHS_CONF:-}"
+  [[ -z "$conf" ]] && conf=$(detect_ohs_conf)
+  if [[ -n "$conf" ]]; then
     local comp
-    comp=$(ls -d "$dh/config/fmwconfig/components/OHS/instances/"ohs* 2>/dev/null \
-           | head -1 | xargs -I{} basename {} 2>/dev/null)
+    comp=$(echo "$conf" | grep -oE 'instances/[^/]+' | head -1 | cut -d/ -f2)
     [[ -n "$comp" ]] && echo "$comp" && return
   fi
 
-  # ② opmn.xml에서 추출 (OBIEE 11g 호환)
+  # ② opmn.xml에서 추출
   local opmn_xml
   opmn_xml=$(find $SEARCH_ROOTS -maxdepth 12 -name "opmn.xml" \
              -not -path "*/backup/*" 2>/dev/null | head -1)
