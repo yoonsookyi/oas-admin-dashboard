@@ -434,8 +434,8 @@ read -rp "  위 설정으로 배포를 진행하시겠습니까? [y/N]: " confir
 hdr "Step 3 — HTML 파일 배포"
 
 [[ ! -d "$OHS_HTDOCS" ]] && { err "OHS htdocs 경로가 없습니다: $OHS_HTDOCS"; exit 1; }
-cp "$SCRIPT_DIR/index.html" "$OHS_HTDOCS/oas-dashboard.html"
-ok "index.html → $OHS_HTDOCS/oas-dashboard.html"
+cp "$SCRIPT_DIR/oas-dashboard.html" "$OHS_HTDOCS/oas-dashboard.html"
+ok "oas-dashboard.html → $OHS_HTDOCS/oas-dashboard.html"
 
 if [[ "$DEPLOY_OPT" == "a" ]]; then
   hdr "Option A 배포 완료"
