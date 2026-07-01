@@ -6,7 +6,7 @@
 set -e
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/u01/oas-backup/snapshots"
+BACKUP_DIR="/u01/oas-backup/oas-snapshots"
 # OAS(FMW 기반): 모든 런타임 데이터는 DOMAIN_HOME 아래에 있음
 DOMAIN_HOME="${DOMAIN_HOME:-/u01/data/domains/bi}"
 

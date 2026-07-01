@@ -362,8 +362,8 @@ fi
 
 # 설치 디렉터리: ORACLE_BASE 기반으로 제안
 ORACLE_BASE=$(detect_oracle_base)
-DEFAULT_METRICS_DIR="$ORACLE_BASE/scripts/oas-metrics"
-DEFAULT_BACKUP_DIR="$ORACLE_BASE/backup/oas-snapshots"
+DEFAULT_METRICS_DIR="$ORACLE_BASE/oas-dashboard-scripts/oas-metrics"
+DEFAULT_BACKUP_DIR="$ORACLE_BASE/oas-backup/oas-snapshots"
 
 if [[ "$DEPLOY_OPT" == "b" ]]; then
   echo ""
@@ -424,13 +424,13 @@ chmod +x "$METRICS_INSTALL/backup.sh"
 ok "backup.sh 복사 및 실행권한 부여"
 
 # backup.sh 의 BACKUP_DIR 경로를 실제 환경에 맞게 sed로 치환
-sed -i "s|BACKUP_DIR=\"/u01/oas-backup/snapshots\"|BACKUP_DIR=\"$BACKUP_INSTALL\"|g" \
+sed -i "s|BACKUP_DIR=\"/u01/oas-backup/oas-snapshots\"|BACKUP_DIR=\"$BACKUP_INSTALL\"|g" \
   "$METRICS_INSTALL/backup.sh" 2>/dev/null || true
 
 # metrics_server.py 의 BACKUP_DIR, BACKUP_SCRIPT 경로 치환
 sed -i \
-  -e "s|BACKUP_DIR\s*=\s*'/u01/oas-backup/snapshots'|BACKUP_DIR    = '$BACKUP_INSTALL'|" \
-  -e "s|BACKUP_SCRIPT\s*=\s*'/u01/oas-scripts/oas-metrics/backup.sh'|BACKUP_SCRIPT = '$METRICS_INSTALL/backup.sh'|" \
+  -e "s|BACKUP_DIR\s*=\s*'/u01/oas-backup/oas-snapshots'|BACKUP_DIR    = '$BACKUP_INSTALL'|" \
+  -e "s|BACKUP_SCRIPT\s*=\s*'/u01/oas-dashboard-scripts/oas-metrics/backup.sh'|BACKUP_SCRIPT = '$METRICS_INSTALL/backup.sh'|" \
   "$METRICS_INSTALL/metrics_server.py" 2>/dev/null || true
 ok "metrics_server.py 내부 경로 치환 완료"
 

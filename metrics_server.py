@@ -23,8 +23,8 @@ BIND = '127.0.0.1'   # OHS 프록시 사용: localhost 전용
                       # 직접 접근 원하면 '0.0.0.0' 으로 변경
 
 # ── 백업 설정 (환경에 맞게 수정) ──────────────────────────
-BACKUP_DIR    = '/u01/oas-backup/snapshots'
-BACKUP_SCRIPT = '/u01/oas-scripts/oas-metrics/backup.sh'
+BACKUP_DIR    = '/u01/oas-backup/oas-snapshots'
+BACKUP_SCRIPT = '/u01/oas-dashboard-scripts/oas-metrics/backup.sh'
 # ─────────────────────────────────────────────────────────
 
 # ── Usage Tracking DB 연결 설정 ───────────────────────────
