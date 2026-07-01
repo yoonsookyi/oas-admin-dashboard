@@ -109,51 +109,59 @@ detect_oracle_home() {
 detect_domain_home() {
   local val="${DOMAIN_HOME:-}"
 
-  # ① 환경변수
-  [[ -n "$val" && -f "$val/config/config.xml" ]] && echo "$val" && return
+  # ① 환경변수 — OAS BI 도메인 여부를 NQSConfig.INI 존재로 검증
+  if [[ -n "$val" ]]; then
+    [[ -f "$val/config/fmwconfig/biconfig/OBIS/NQSConfig.INI" ]] && echo "$val" && return
+    # biconfig 디렉터리만 있어도 OAS 도메인으로 인정
+    [[ -d "$val/config/fmwconfig/biconfig" ]] && echo "$val" && return
+  fi
 
-  # ② WebLogic config.xml 탐색 (bifoundation_domain 또는 bi 도메인)
+  # ② NQSConfig.INI 위치로 역추산 (OAS BI 도메인 고유 파일)
+  #    경로: $DOMAIN_HOME/config/fmwconfig/biconfig/OBIS/NQSConfig.INI
+  local nqs
+  nqs=$(find $SEARCH_ROOTS -maxdepth 12 -name "NQSConfig.INI" \
+        -path "*/fmwconfig/biconfig/*" \
+        -not -path "*/backup/*" -not -path "*/tmp/*" 2>/dev/null | head -1)
+  if [[ -n "$nqs" ]]; then
+    # dirname 5회: OBIS → biconfig → fmwconfig → config → DOMAIN_HOME
+    local dh
+    dh=$(dirname "$(dirname "$(dirname "$(dirname "$(dirname "$nqs")")")")")
+    [[ -d "$dh" ]] && echo "$dh" && return
+  fi
+
+  # ③ 실행 중인 BI Server 프로세스에서 도메인 경로 추출
+  #    nqserver 는 -DomainHome 또는 환경변수로 도메인 경로를 가짐
+  local proc_dh
+  proc_dh=$(ps -eo args 2>/dev/null | grep -v grep \
+    | grep -E "nqserver|sawserver|obisch" \
+    | grep -oE '\-DomainHome[= ][^ ]+' | head -1 \
+    | sed 's/-DomainHome[= ]//')
+  [[ -n "$proc_dh" && -d "$proc_dh/config/fmwconfig/biconfig" ]] \
+    && echo "$proc_dh" && return
+
+  # ④ config.xml 탐색 — biconfig 디렉터리가 함께 있는 도메인만 선택
   local cfg
-  cfg=$(find $SEARCH_ROOTS -maxdepth 10 -name "config.xml" \
+  cfg=$(find $SEARCH_ROOTS -maxdepth 12 -name "config.xml" \
         -path "*/domains/*/config/config.xml" \
         -not -path "*/backup/*" 2>/dev/null \
     | while read -r f; do
-        grep -q "bi\|OracleBI\|analytics" "$f" 2>/dev/null && echo "$f"
+        local d
+        d=$(dirname "$(dirname "$f")")   # domain root
+        [[ -d "$d/config/fmwconfig/biconfig" ]] && echo "$f" && break
       done | head -1)
   if [[ -n "$cfg" ]]; then
     echo "$(dirname "$(dirname "$cfg")")"
     return
   fi
 
-  # ③ 실행 중인 WebLogic 프로세스에서 추출
-  local wl_home
-  wl_home=$(ps -eo args 2>/dev/null | grep -v grep \
-    | grep "weblogic.Server" \
-    | grep -oE 'Dweblogic.Domain=[^ ]+' | head -1 | cut -d= -f2)
-  [[ -n "$wl_home" && -d "$wl_home" ]] && echo "$wl_home" && return
-
-  # ④ AdminServer 로그 디렉터리 탐색
-  local adm_log
-  adm_log=$(find $SEARCH_ROOTS -maxdepth 10 -name "AdminServer.log" \
-            -not -path "*/backup/*" 2>/dev/null | head -1)
-  if [[ -n "$adm_log" ]]; then
-    # .../domains/<domain>/servers/AdminServer/logs/AdminServer.log
-    echo "$(dirname "$(dirname "$(dirname "$(dirname "$adm_log")")")")"
-    return
-  fi
-
-  # ⑤ ORACLE_INSTANCE 기준 상대 탐색
-  local oi="${ORACLE_INSTANCE:-}"
-  if [[ -n "$oi" ]]; then
-    local base
-    base=$(dirname "$(dirname "$oi")")
-    for p in \
-      "$base/domains/bi" \
-      "$base/domains/bifoundation_domain" \
-      "/u01/data/domains/bi"; do
-      [[ -f "$p/config/config.xml" ]] && echo "$p" && return
-    done
-  fi
+  # ⑤ 일반 경로 패턴 (biconfig 존재 확인)
+  for p in \
+    /u01/data/domains/bi \
+    /u01/oracle/config/domains/bi \
+    /u01/domains/bi \
+    /u02/data/domains/bi; do
+    [[ -d "$p/config/fmwconfig/biconfig" ]] && echo "$p" && return
+  done
 
   echo ""
 }
