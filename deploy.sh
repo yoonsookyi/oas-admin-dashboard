@@ -581,34 +581,45 @@ else
   ok "ProxyPass 추가 완료: $OHS_CONF"
 fi
 
-# ── Step 9: OHS 재시작 ────────────────────────────────────
-hdr "Step 9 — OHS 재시작"
+# ── Step 9: OAS 재시작 ────────────────────────────────────
+hdr "Step 9 — OAS 재시작"
 
-BITOOLS_STOP="$DOMAIN_HOME/bitools/bin/stop.sh"
-BITOOLS_START="$DOMAIN_HOME/bitools/bin/start.sh"
+# OAS 프로세스 관리 스크립트 (DOMAIN_HOME/bitools/bin/)
+# 참고: https://docs.oracle.com/en/middleware/bi/analytics-server/administer-oas/use-commands-start-stop-and-view-status-processes.html
+BITOOLS_BIN="$DOMAIN_HOME/bitools/bin"
+BITOOLS_STOP="$BITOOLS_BIN/stop.sh"
+BITOOLS_START="$BITOOLS_BIN/start.sh"
+BITOOLS_STATUS="$BITOOLS_BIN/status.sh"
 
-read -rp "  OAS를 지금 재시작하시겠습니까? (stop → start) [y/N]: " restart_ohs
-if [[ "${restart_ohs,,}" == "y" ]]; then
-  if [[ -f "$BITOOLS_STOP" && -f "$BITOOLS_START" ]]; then
+if [[ ! -f "$BITOOLS_STOP" || ! -f "$BITOOLS_START" ]]; then
+  err "bitools 를 찾을 수 없습니다: $BITOOLS_BIN"
+  info "수동으로 재시작하세요:"
+  info "  $BITOOLS_STOP -noprompt"
+  info "  $BITOOLS_START -noprompt"
+  info "상태 확인: $BITOOLS_STATUS -v"
+else
+  read -rp "  OAS를 지금 재시작하시겠습니까? (stop → start) [y/N]: " restart_ohs
+  if [[ "${restart_ohs,,}" == "y" ]]; then
     info "OAS 서비스 중지 중..."
-    "$BITOOLS_STOP"
+    "$BITOOLS_STOP" -noprompt
     sleep 5
     info "OAS 서비스 기동 중..."
-    "$BITOOLS_START"
-    sleep 10
+    "$BITOOLS_START" -noprompt
+    sleep 15
+    info "서비스 상태 확인 중..."
+    "$BITOOLS_STATUS" -v
+    echo ""
     if curl -sf "http://localhost:${OHS_PORT}/sysmgmt/metrics" >/dev/null; then
       ok "재시작 완료 — ProxyPass 동작 확인"
     else
       err "ProxyPass 응답 없음. OHS 설정 파일을 점검하세요: $OHS_CONF"
     fi
   else
-    err "bitools 를 찾을 수 없습니다: $ORACLE_HOME/bitools/bin/"
-    info "수동으로 재시작하세요:"
-    info "  $BITOOLS_STOP && $BITOOLS_START"
+    info "재시작을 건너뜁니다. 배포 후 아래 명령으로 수동 재시작하세요:"
+    info "  중지: $BITOOLS_STOP -noprompt"
+    info "  기동: $BITOOLS_START -noprompt"
+    info "  상태: $BITOOLS_STATUS -v"
   fi
-else
-  info "재시작을 건너뜁니다. 배포 후 아래 명령으로 수동 재시작하세요:"
-  info "  $BITOOLS_STOP && $BITOOLS_START"
 fi
 
 # ── 완료 ──────────────────────────────────────────────────
