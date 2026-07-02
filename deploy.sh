@@ -19,6 +19,48 @@ hdr()  { echo -e "\n${C_BLD}━━  $*  ━━${C_NC}"; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+
+document_root_from_conf() {
+  local conf="$1"
+  [[ -z "$conf" || ! -f "$conf" ]] && return
+
+  local raw conf_dir inst_dir candidate oracle_instance
+  raw=$(awk 'tolower($1)=="documentroot" {print $2; exit}' "$conf" 2>/dev/null | tr -d '"')
+  conf_dir=$(cd "$(dirname "$conf")" && pwd)
+
+  if [[ -n "$raw" ]]; then
+    candidate="$raw"
+    if [[ "$candidate" == *'${ORACLE_INSTANCE}'* || "$candidate" == *'$ORACLE_INSTANCE'* ]]; then
+      oracle_instance="${ORACLE_INSTANCE:-}"
+      if [[ -z "$oracle_instance" && "$conf" == */config/fmwconfig/components/* ]]; then
+        oracle_instance=$(echo "$conf" | sed 's|/config/fmwconfig/components/.*||')
+      fi
+      if [[ -n "$oracle_instance" ]]; then
+        candidate=${candidate//'${ORACLE_INSTANCE}'/$oracle_instance}
+        candidate=${candidate//'$ORACLE_INSTANCE'/$oracle_instance}
+      fi
+    fi
+    [[ "$candidate" != /* ]] && candidate="$conf_dir/$candidate"
+    [[ -d "$candidate" ]] && cd "$candidate" && pwd && return
+  fi
+
+  inst_dir=$(dirname "$conf_dir")
+  [[ -d "$inst_dir/htdocs" ]] && cd "$inst_dir/htdocs" && pwd && return
+}
+
+verify_same_file() {
+  local src_file="$1" dst_file="$2" src_size dst_size
+  if ! cmp -s "$src_file" "$dst_file"; then
+    src_size=$(wc -c < "$src_file" 2>/dev/null || echo unknown)
+    dst_size=$(wc -c < "$dst_file" 2>/dev/null || echo unknown)
+    err "HTML copy verification failed"
+    src "source: $src_file (${src_size} bytes)"
+    src "target: $dst_file (${dst_size} bytes)"
+    src "Check OHS htdocs/DocumentRoot and filesystem permissions."
+    exit 1
+  fi
+}
+
 # oracle 계정 실행 확인
 if [[ "$(id -u)" -eq 0 ]]; then
   echo -e "  ${C_YLW}[경고]${C_NC} root로 실행 중입니다. oracle 계정으로 실행하세요."
@@ -178,23 +220,24 @@ detect_domain_home() {
 # OHS htdocs 탐지
 # 실행 중인 httpd.conf의 DocumentRoot가 가장 정확한 경로를 반환함
 detect_ohs_htdocs() {
-  # ① 실행 중인 httpd.conf → DocumentRoot 추출 (가장 신뢰도 높음)
-  local conf
-  conf=$(detect_ohs_conf)
+  if [[ -n "${OHS_HTDOCS:-}" && -d "$OHS_HTDOCS" ]]; then
+    cd "$OHS_HTDOCS" && pwd
+    return
+  fi
+
+  local conf docroot
+  conf="${OHS_CONF:-}"
+  [[ -z "$conf" ]] && conf=$(detect_ohs_conf)
   if [[ -n "$conf" && -f "$conf" ]]; then
-    local docroot
-    docroot=$(grep -E "^DocumentRoot" "$conf" 2>/dev/null \
-      | head -1 | awk '{print $2}' | tr -d '"')
+    docroot=$(document_root_from_conf "$conf" || true)
     [[ -n "$docroot" && -d "$docroot" ]] && echo "$docroot" && return
   fi
 
-  # ② SEARCH_ROOTS 탐색 — template·sample·ORACLE_HOME 하위 제외
   local oh="${ORACLE_HOME:-}"
   find $SEARCH_ROOTS -maxdepth 12 -type d -name "htdocs" \
        -not -path "*/template*" -not -path "*/sample*" \
        -not -path "*/backup*"   -not -path "*/tmp*" 2>/dev/null \
     | while read -r d; do
-        # ORACLE_HOME 하위이면 제외 (템플릿 영역)
         [[ -n "$oh" && "$d" == "$oh"* ]] && continue
         [[ -f "$(dirname "$d")/conf/httpd.conf" || \
            -f "$(dirname "$d")/httpd.conf" ]] && echo "$d" && break
@@ -203,8 +246,6 @@ detect_ohs_htdocs() {
   echo ""
 }
 
-# OHS httpd.conf 탐지
-# 실행 중인 httpd 프로세스의 -f 인자가 가장 정확한 경로를 반환함
 detect_ohs_conf() {
   # ① 실행 중인 httpd 프로세스의 -f 옵션에서 추출 (가장 신뢰도 높음)
   local proc_conf
@@ -400,8 +441,8 @@ echo ""
 
 DOMAIN_HOME=$(detect_domain_home)
 ORACLE_HOME=$(detect_oracle_home)   # domain-info.xml 추출을 위해 DOMAIN_HOME 탐지 후 실행
-OHS_HTDOCS=$(detect_ohs_htdocs)
 OHS_CONF=$(detect_ohs_conf)
+OHS_HTDOCS=$(detect_ohs_htdocs)
 OHS_PORT=$(detect_ohs_port)
 OHS_COMPONENT=$(detect_ohs_component)
 OHS_DOMAIN_HOME=$(detect_ohs_domain_home)
@@ -422,12 +463,24 @@ echo ""
 
 confirm_or_input "DOMAIN_HOME    " DOMAIN_HOME "$DOMAIN_HOME" "true" "oas_domain"
 confirm_or_input "ORACLE_HOME    " ORACLE_HOME "$ORACLE_HOME" "true" "oas_home"
-confirm_or_input "OHS htdocs     " OHS_HTDOCS  "$OHS_HTDOCS"  "true" "dir"
 if [[ "$DEPLOY_OPT" == "b" ]]; then
-  confirm_or_input "OHS httpd.conf " OHS_CONF        "$OHS_CONF"        "true"  "file"
+  confirm_or_input "OHS httpd.conf " OHS_CONF "$OHS_CONF" "true" "file"
+else
+  confirm_or_input "OHS httpd.conf " OHS_CONF "$OHS_CONF" "false" "file"
+fi
+
+CONF_HTDOCS=$(document_root_from_conf "$OHS_CONF" || true)
+if [[ -n "$CONF_HTDOCS" && "$CONF_HTDOCS" != "$OHS_HTDOCS" ]]; then
+  info "OHS htdocs recalculated from confirmed httpd.conf"
+  src "OHS htdocs <- $CONF_HTDOCS"
+  OHS_HTDOCS="$CONF_HTDOCS"
+fi
+confirm_or_input "OHS htdocs     " OHS_HTDOCS "$OHS_HTDOCS" "true" "dir"
+
+if [[ "$DEPLOY_OPT" == "b" ]]; then
   confirm_or_input "OHS DOMAIN_HOME" OHS_DOMAIN_HOME "$OHS_DOMAIN_HOME" "false" "dir"
-  confirm_or_input "OHS 포트       " OHS_PORT        "$OHS_PORT"        "true"  ""
-  confirm_or_input "OHS 컴포넌트명 " OHS_COMPONENT   "$OHS_COMPONENT"   "true"  ""
+  confirm_or_input "OHS port       " OHS_PORT        "$OHS_PORT"        "true"  ""
+  confirm_or_input "OHS component  " OHS_COMPONENT   "$OHS_COMPONENT"   "true"  ""
 fi
 
 # 설치 디렉터리: ORACLE_BASE 기반으로 제안
@@ -465,9 +518,13 @@ read -rp "  위 설정으로 배포를 진행하시겠습니까? [y/N]: " confir
 # ════════════════════════════════════════════════════════════
 hdr "Step 3 — HTML 파일 배포"
 
-[[ ! -d "$OHS_HTDOCS" ]] && { err "OHS htdocs 경로가 없습니다: $OHS_HTDOCS"; exit 1; }
-cp "$SCRIPT_DIR/oas-dashboard.html" "$OHS_HTDOCS/oas-dashboard.html"
-ok "oas-dashboard.html → $OHS_HTDOCS/oas-dashboard.html"
+SRC_HTML="$SCRIPT_DIR/oas-dashboard.html"
+DST_HTML="$OHS_HTDOCS/oas-dashboard.html"
+[[ ! -f "$SRC_HTML" ]] && { err "Source HTML not found: $SRC_HTML"; exit 1; }
+[[ ! -d "$OHS_HTDOCS" ]] && { err "OHS htdocs path not found: $OHS_HTDOCS"; exit 1; }
+cp -f "$SRC_HTML" "$DST_HTML"
+verify_same_file "$SRC_HTML" "$DST_HTML"
+ok "oas-dashboard.html copied and verified -> $DST_HTML"
 
 if [[ "$DEPLOY_OPT" == "a" ]]; then
   hdr "Option A 배포 완료"
@@ -514,18 +571,39 @@ if [[ -z "$PY3" ]]; then
 fi
 ok "Python: $($PY3 --version 2>&1)"
 
-PIP3=$(command -v pip3 || command -v pip || true)
-if [[ -n "$PIP3" ]]; then
-  # --user 플래그: oracle 계정이 시스템 Python을 사용할 때 root 권한 불필요
-  $PIP3 install --quiet --user psutil && ok "psutil 설치 완료 (~/.local)"
-  read -rp "  oracledb 설치하시겠습니까? (Usage Tracking 사용 시 필요) [y/N]: " inst_db
-  [[ "${inst_db,,}" == "y" ]] \
-    && $PIP3 install --quiet --user oracledb && ok "oracledb 설치 완료 (~/.local)" \
-    || info "oracledb 설치 건너뜀"
+if "$PY3" -m pip --version >/dev/null 2>&1; then
+  PIP_CMD=("$PY3" -m pip)
 else
-  err "pip 를 찾을 수 없습니다. 수동으로 설치하세요:"
-  info "  pip3 install --user psutil oracledb"
+  PIP_BIN=$(command -v pip3 || command -v pip || true)
+  [[ -z "$PIP_BIN" ]] && { err "pip not found. Install pip or run: python3 -m ensurepip --user"; exit 1; }
+  PIP_CMD=("$PIP_BIN")
 fi
+
+install_python_package() {
+  local package="$1" module="$2"
+  info "Installing Python package: $package"
+  if ! "${PIP_CMD[@]}" install --user --upgrade "$package"; then
+    err "Python package install failed: $package"
+    exit 1
+  fi
+  if ! "$PY3" -c "import $module" >/dev/null 2>&1; then
+    err "Python module import check failed: $module"
+    src "The package may have been installed for a different Python interpreter."
+    src "Python: $PY3"
+    src "Pip: ${PIP_CMD[*]}"
+    exit 1
+  fi
+  ok "$package installed and import verified"
+}
+
+install_python_package psutil psutil
+read -rp "  Install oracledb? Required for Usage Tracking. [y/N]: " inst_db
+if [[ "${inst_db,,}" == "y" ]]; then
+  install_python_package oracledb oracledb
+else
+  info "oracledb install skipped"
+fi
+
 
 # ── Step 6: start.sh 생성 ─────────────────────────────────
 hdr "Step 6 — start.sh 생성"
