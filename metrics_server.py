@@ -74,12 +74,7 @@ def _ohs_dh(*parts): return os.path.join(_OHS_DH, *parts) if _OHS_DH else ''
 LOG_FILES = {
     'obips':    _dh('servers', 'obips1',    'logs', 'sawjsonlog0.log'),
     'nqserver': _dh('servers', 'obis1',     'logs', 'obis1-diagnostic.json'),
-    'nqquery':  _dh('servers', 'obis1',     'logs', 'obis1-query.json'),
-    'obisch':   _dh('servers', 'obisch1',   'logs', 'nqscheduler.log'),
     'domain':   _dh('servers', 'bi_server1','logs', 'bi_server1.log'),
-    'admin':    _dh('servers', 'AdminServer','logs','AdminServer.log'),
-    'ohs':      _ohs_dh('config', 'fmwconfig', 'components', 'OHS',
-                        'instances', 'ohs1', 'logs', 'error_log'),
 }
 LOG_DEFAULT_LINES = 500
 # ─────────────────────────────────────────────────────────
