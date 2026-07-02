@@ -63,18 +63,23 @@ def _resolve_oracle_home():
                 pass
     return ''
 
+
+# OHS는 별도 도메인(ohs_domain)에서 실행됨 — OHS_DOMAIN_HOME 환경변수 필요
+_OHS_DH = os.environ.get('OHS_DOMAIN_HOME', '')
+def _ohs_dh(*parts): return os.path.join(_OHS_DH, *parts) if _OHS_DH else ''
+
+# ── OAS 로그 파일 경로 (OAS 2026: servers/<comp>/logs/ 구조) ──
+# obips1, obis1, obisch1 등 컴포넌트별 서버 로그 디렉터리 사용
+# OHS 로그는 OHS_DOMAIN_HOME 환경변수가 설정된 경우에만 접근 가능
 LOG_FILES = {
-    'obips':    _dh('diagnostics','logs','OracleBIPresentationServicesComponent',
-                    'coreapplication_obips1','sawlog0.log'),
-    'nqserver': _dh('diagnostics','logs','OracleBIServerComponent',
-                    'coreapplication_obis1','nqserver.log'),
-    'nqquery':  _dh('diagnostics','logs','OracleBIServerComponent',
-                    'coreapplication_obis1','nqquery.log'),
-    'obisch':   _dh('diagnostics','logs','OracleBISchedulerComponent',
-                    'coreapplication_obisch1','obisch1.log'),
-    'domain':   _dh('servers','bi_server1','logs','bi_server1.log'),
-    'admin':    _dh('servers','AdminServer','logs','AdminServer.log'),
-    'ohs':      _dh('diagnostics','logs','OracleHTTPServer','ohs1','error_log'),
+    'obips':    _dh('servers', 'obips1',    'logs', 'sawjsonlog0.log'),
+    'nqserver': _dh('servers', 'obis1',     'logs', 'obis1-diagnostic.json'),
+    'nqquery':  _dh('servers', 'obis1',     'logs', 'obis1-query.json'),
+    'obisch':   _dh('servers', 'obisch1',   'logs', 'nqscheduler.log'),
+    'domain':   _dh('servers', 'bi_server1','logs', 'bi_server1.log'),
+    'admin':    _dh('servers', 'AdminServer','logs','AdminServer.log'),
+    'ohs':      _ohs_dh('config', 'fmwconfig', 'components', 'OHS',
+                        'instances', 'ohs1', 'logs', 'error_log'),
 }
 LOG_DEFAULT_LINES = 500
 # ─────────────────────────────────────────────────────────
@@ -351,14 +356,34 @@ def parse_log_lines(lines, src_key):
 
         matched = None
 
+        # JSON 포맷 시도 (OAS 2026: sawjsonlog0.log, obis1-diagnostic.json 등)
+        if line.startswith('{'):
+            try:
+                obj = json.loads(line)
+                dt = obj.get('datetime', '')
+                ts_short = dt[:19].replace('T', ' ') if dt else ''
+                lv_raw = obj.get('level', 'INFO')
+                src = obj.get('app') or obj.get('comp_id') or src_key
+                cat = obj.get('category') or obj.get('module') or ''
+                msg = obj.get('msg', '')
+                if cat:
+                    msg = f'[{cat}] {msg}'
+                user = obj.get('user', '')
+                if user:
+                    msg = f'{msg} (user={user})'
+                matched = {'t': ts_short, 'lv': _norm_level(lv_raw),
+                           'src': src, 'msg': msg.strip()}
+            except Exception:
+                pass
+
         # ODL 형식 시도
-        m = _ODL_RE.match(line)
-        if m:
-            ts, comp, lv, msg = m.group(1), m.group(2), m.group(3), m.group(4)
-            # 타임스탬프를 읽기 쉬운 형태로 변환
-            ts_short = ts[:19].replace('T', ' ')
-            matched = {'t': ts_short, 'lv': _norm_level(lv),
-                       'src': comp or src_key, 'msg': msg.strip()}
+        if not matched:
+            m = _ODL_RE.match(line)
+            if m:
+                ts, comp, lv, msg = m.group(1), m.group(2), m.group(3), m.group(4)
+                ts_short = ts[:19].replace('T', ' ')
+                matched = {'t': ts_short, 'lv': _norm_level(lv),
+                           'src': comp or src_key, 'msg': msg.strip()}
 
         # nqserver 형식 시도
         if not matched:
@@ -635,8 +660,8 @@ if __name__ == '__main__':
     print(f'  GET  /logs      → OAS 로그 파싱  (?file=obips&level=ERROR&lines=500)')
     print(f'  GET  /snapshots → 스냅샷 목록  (BACKUP_DIR: {BACKUP_DIR})')
     print(f'  POST /snapshot  → 스냅샷 생성  (SCRIPT: {BACKUP_SCRIPT})')
-    print(f'  DOMAIN_HOME={_DH or "(미설정)"}')
     print(f'  DOMAIN_HOME    ={_DH or "(미설정)"}')
+    print(f'  OHS_DOMAIN_HOME={_OHS_DH or "(미설정 — OHS 로그 비활성)"}')
     try:
         server.serve_forever()
     except KeyboardInterrupt:

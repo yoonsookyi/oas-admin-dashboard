@@ -276,6 +276,20 @@ detect_ohs_component() {
   echo "ohs1"   # 기본값
 }
 
+# OHS 도메인 홈 탐지
+# OHS는 OAS BI 도메인과 별도 도메인에서 실행됨
+# httpd.conf 경로에서 역산: $OHS_DOMAIN_HOME/config/fmwconfig/components/OHS/instances/ohs1/httpd.conf
+detect_ohs_domain_home() {
+  local conf="${OHS_CONF:-}"
+  [[ -z "$conf" ]] && conf=$(detect_ohs_conf)
+  if [[ -n "$conf" ]]; then
+    local dh
+    dh=$(echo "$conf" | sed 's|/config/fmwconfig/components/.*||')
+    [[ -n "$dh" && -d "$dh/config/fmwconfig" ]] && echo "$dh" && return
+  fi
+  echo ""
+}
+
 # ORACLE_BASE 추정 (설치 디렉터리 기본 경로 산출용)
 detect_oracle_base() {
   [[ -n "${ORACLE_BASE:-}" && -d "$ORACLE_BASE" ]] && echo "$ORACLE_BASE" && return
@@ -390,10 +404,12 @@ OHS_HTDOCS=$(detect_ohs_htdocs)
 OHS_CONF=$(detect_ohs_conf)
 OHS_PORT=$(detect_ohs_port)
 OHS_COMPONENT=$(detect_ohs_component)
+OHS_DOMAIN_HOME=$(detect_ohs_domain_home)
 
 # 탐지 소스 표시
 [[ -n "$DOMAIN_HOME"     ]] && src "DOMAIN_HOME     ← $DOMAIN_HOME"     || src "DOMAIN_HOME     ← 미감지"
 [[ -n "$ORACLE_HOME"     ]] && src "ORACLE_HOME     ← $ORACLE_HOME"     || src "ORACLE_HOME     ← 미감지"
+[[ -n "$OHS_DOMAIN_HOME" ]] && src "OHS DOMAIN_HOME ← $OHS_DOMAIN_HOME" || src "OHS DOMAIN_HOME ← 미감지"
 [[ -n "$OHS_HTDOCS"      ]] && src "OHS htdocs      ← $OHS_HTDOCS"      || src "OHS htdocs      ← 미감지"
 [[ -n "$OHS_CONF"        ]] && src "OHS httpd.conf  ← $OHS_CONF"        || src "OHS httpd.conf  ← 미감지"
 src "OHS 포트         ← $OHS_PORT"
@@ -408,9 +424,10 @@ confirm_or_input "DOMAIN_HOME    " DOMAIN_HOME "$DOMAIN_HOME" "true" "oas_domain
 confirm_or_input "ORACLE_HOME    " ORACLE_HOME "$ORACLE_HOME" "true" "oas_home"
 confirm_or_input "OHS htdocs     " OHS_HTDOCS  "$OHS_HTDOCS"  "true" "dir"
 if [[ "$DEPLOY_OPT" == "b" ]]; then
-  confirm_or_input "OHS httpd.conf " OHS_CONF      "$OHS_CONF"      "true" "file"
-  confirm_or_input "OHS 포트       " OHS_PORT      "$OHS_PORT"      "true" ""
-  confirm_or_input "OHS 컴포넌트명 " OHS_COMPONENT "$OHS_COMPONENT" "true" ""
+  confirm_or_input "OHS httpd.conf " OHS_CONF        "$OHS_CONF"        "true"  "file"
+  confirm_or_input "OHS DOMAIN_HOME" OHS_DOMAIN_HOME "$OHS_DOMAIN_HOME" "false" "dir"
+  confirm_or_input "OHS 포트       " OHS_PORT        "$OHS_PORT"        "true"  ""
+  confirm_or_input "OHS 컴포넌트명 " OHS_COMPONENT   "$OHS_COMPONENT"   "true"  ""
 fi
 
 # 설치 디렉터리: ORACLE_BASE 기반으로 제안
@@ -432,6 +449,7 @@ printf "  │  %-20s %s\n" "ORACLE_HOME"  "$ORACLE_HOME"
 printf "  │  %-20s %s\n" "OHS htdocs"      "$OHS_HTDOCS"
 if [[ "$DEPLOY_OPT" == "b" ]]; then
   printf "  │  %-20s %s\n" "OHS httpd.conf"  "$OHS_CONF"
+  printf "  │  %-20s %s\n" "OHS DOMAIN_HOME" "$OHS_DOMAIN_HOME"
   printf "  │  %-20s %s\n" "OHS 포트"        "$OHS_PORT"
   printf "  │  %-20s %s\n" "OHS 컴포넌트"    "$OHS_COMPONENT"
   printf "  │  %-20s %s\n" "스크립트 설치"   "$METRICS_INSTALL"
@@ -537,6 +555,7 @@ cat > "$METRICS_INSTALL/start.sh" <<STARTSH
 #!/bin/bash
 export ORACLE_HOME=$ORACLE_HOME
 export DOMAIN_HOME=$DOMAIN_HOME
+export OHS_DOMAIN_HOME=$OHS_DOMAIN_HOME
 
 $UT_EXPORTS
 
