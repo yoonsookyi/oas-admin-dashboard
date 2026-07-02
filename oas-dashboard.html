@@ -326,8 +326,6 @@ hr { border:none; border-top:1px solid var(--border); margin:20px 0; }
   <div class="tab"     onclick="goTab('logs')">📋 로그 분석 <span class="tbadge" id="tbLog" style="display:none">0</span></div>
   <div class="tab"     onclick="goTab('content')">📁 콘텐츠 인벤토리</div>
   <div class="tab"     onclick="goTab('usage')">📊 사용량 분석 <span class="tbadge" id="tbUsage" style="display:none">0</span></div>
-  <div class="tab"     onclick="goTab('orphan')">🔍 소유자 없는 콘텐츠 <span class="tbadge" id="tbOrphan" style="display:none">0</span></div>
-  <div class="tab"     onclick="goTab('upgrade')">🔼 업그레이드 진단</div>
   <div class="tab"     onclick="goTab('patch')">🔧 패치·업그레이드 점검</div>
   <div class="tab"     onclick="goTab('runbook')">📖 Runbook</div>
 </nav>
@@ -439,49 +437,7 @@ hr { border:none; border-top:1px solid var(--border); margin:20px 0; }
       </div>
     </div>
 
-    <!-- JVM Heap -->
-    <div class="card mt20">
-      <div class="ct">JVM 힙 (WebLogic Managed Server)</div>
-      <div class="g3 mt8">
-        <div>
-          <div class="res-row"><span class="res-lbl">힙 사용량</span><span class="res-val" id="jvm-used">-- MB</span></div>
-          <div class="pbar"><div class="pfill pf-b" id="jvm-bar" style="width:0"></div></div>
-          <div class="fz11 col-m mt8" id="jvm-max">최대: --</div>
-        </div>
-        <div>
-          <div class="res-row"><span class="res-lbl">GC 횟수 (1h)</span><span class="res-val" id="jvm-gc">--</span></div>
-          <div class="res-row mt8"><span class="res-lbl">GC 소요 시간</span><span class="res-val" id="jvm-gct">-- ms</span></div>
-        </div>
-        <div>
-          <div class="res-row"><span class="res-lbl">활성 스레드</span><span class="res-val" id="jvm-th">--</span></div>
-          <div class="res-row mt8"><span class="res-lbl">데몬 스레드</span><span class="res-val" id="jvm-dm">--</span></div>
-        </div>
-      </div>
-    </div>
 
-    <!-- 수동 입력 -->
-    <div class="card mt20" style="border-color:var(--yellow-bd);">
-      <div class="ct" style="color:var(--yellow);">수동 입력 (서버 직접 조회 불가 시)</div>
-      <div class="g4 mt8">
-        <div>
-          <div class="fz11 col-m" style="margin-bottom:4px;">CPU %</div>
-          <input type="number" id="m-cpu" placeholder="예: 45" style="width:100%">
-        </div>
-        <div>
-          <div class="fz11 col-m" style="margin-bottom:4px;">메모리 %</div>
-          <input type="number" id="m-mem" placeholder="예: 62" style="width:100%">
-        </div>
-        <div>
-          <div class="fz11 col-m" style="margin-bottom:4px;">디스크 %</div>
-          <input type="number" id="m-disk" placeholder="예: 71" style="width:100%">
-        </div>
-        <div>
-          <div class="fz11 col-m" style="margin-bottom:4px;">Swap %</div>
-          <input type="number" id="m-swap" placeholder="예: 12" style="width:100%">
-        </div>
-      </div>
-      <button class="btn btn-ghost" style="margin-top:12px;" onclick="applyManual()">적용</button>
-    </div>
   </div>
 </div><!-- /p-resource -->
 
@@ -529,9 +485,9 @@ hr { border:none; border-top:1px solid var(--border); margin:20px 0; }
     <div class="card card-sm" style="margin-bottom:12px;">
       <div class="row" style="flex-wrap:wrap;gap:8px;">
         <select id="logFile">
-          <option value="obips">sawjsonlog0.log (Presentation Services)</option>
-          <option value="nqserver">obis1-diagnostic.json (BI Server)</option>
-          <option value="domain">bi_server1.log (WebLogic)</option>
+          <option value="bi_server1">bi_server1.log</option>
+          <option value="adminserver">AdminServer.log</option>
+          <option value="obis1">obis1.log</option>
         </select>
         <select id="logLines">
           <option value="200">최근 200줄</option>
@@ -852,227 +808,7 @@ hr { border:none; border-top:1px solid var(--border); margin:20px 0; }
   </div>
 </div><!-- /p-usage -->
 
-<!-- ╔══════════════════════════════════════════════════════════╗ -->
-<!-- ║  PANEL 6 – 소유자 없는 콘텐츠                             ║ -->
-<!-- ╚══════════════════════════════════════════════════════════╝ -->
-<div class="panel" id="p-orphan">
-  <div class="sec">
-    <div class="sec-hd">
-      <div><div class="sec-title">소유자 없는 콘텐츠</div><div class="sec-desc">퇴사·삭제된 계정 소유 콘텐츠 탐지 및 조치</div></div>
-      <div class="sec-actions"><button class="btn btn-ghost" onclick="scanOrphansDemo()">탐지 실행</button></div>
-    </div>
-
-    <div class="g3" style="margin-bottom:20px;">
-      <div class="card card-sm">
-        <div class="ct">탐지된 항목</div>
-        <div class="cv col-y" id="o-total">--</div>
-        <div class="cs2">소유자 없는 콘텐츠</div>
-      </div>
-      <div class="card card-sm">
-        <div class="ct">비활성 계정 수</div>
-        <div class="cv" id="o-acct">--</div>
-        <div class="cs2">시스템에 없는 소유자</div>
-      </div>
-      <div class="card card-sm">
-        <div class="ct">즉시 조치 권고</div>
-        <div class="cv col-r" id="o-urgent">--</div>
-        <div class="cs2">소유권 이전 또는 삭제</div>
-      </div>
-    </div>
-
-    <div class="card card-sm" style="margin-bottom:12px;">
-      <div class="row" style="gap:8px;flex-wrap:wrap;">
-        <input type="text" id="oQ" placeholder="이름 또는 소유자 검색…" style="width:240px;" oninput="filterOrphans()">
-        <select id="oType" onchange="filterOrphans()">
-          <option value="">전체 유형</option>
-          <option value="대시보드">대시보드</option>
-          <option value="워크북">워크북</option>
-          <option value="데이터셋">데이터셋</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="card" style="overflow:auto;">
-      <table class="tbl">
-        <thead>
-          <tr><th>콘텐츠 이름</th><th>유형</th><th>마지막 소유자</th><th>수정일</th><th>경로</th><th>권고 조치</th></tr>
-        </thead>
-        <tbody id="orphanBody">
-          <tr><td colspan="6" class="col-m" style="text-align:center;padding:28px;">'탐지 실행'을 눌러 스캔하세요</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div><!-- /p-orphan -->
-
-
-<!-- ╔══════════════════════════════════════════════════════════╗ -->
-<!-- ║  PANEL 6 – 업그레이드 진단                                ║ -->
-<!-- ╚══════════════════════════════════════════════════════════╝ -->
-<div class="panel" id="p-upgrade">
-
-  <!-- 헤더 -->
-  <div class="sec">
-    <div class="sec-hd">
-      <div>
-        <div class="sec-title">업그레이드 사전 진단</div>
-        <div class="sec-desc">OAS/OBIEE → OAS 2026 업그레이드에 필요한 환경 정보 수집 및 주의사항 확인</div>
-      </div>
-      <div class="sec-actions">
-        <button class="btn btn-primary" onclick="collectUpgradeInfo()">API 정보 수집</button>
-        <button class="btn btn-ghost"   onclick="exportUpgradeReport()">📥 보고서 내보내기</button>
-      </div>
-    </div>
-
-    <!-- 서버 감지 버전 배너 -->
-    <div id="upg-ver-banner" class="alert a-ok" style="display:none;margin-bottom:12px;">
-      서버 자동 감지 버전: <strong id="upg-ver-str">--</strong>
-      <span id="upg-ver-src" class="fz11" style="margin-left:8px;opacity:.7;"></span>
-    </div>
-    <div id="upg-ver-err" class="alert a-warn" style="display:none;margin-bottom:12px;">
-      ⚠ 버전 자동 감지 실패 — 수동으로 선택하세요.
-      <span id="upg-ver-err-msg" class="fz11" style="margin-left:6px;opacity:.8;"></span>
-    </div>
-
-    <!-- 수동 입력 -->
-    <div class="card">
-      <div class="ct">현재 환경</div>
-      <div class="g4 mt8">
-        <div>
-          <div class="fz11 col-m" style="margin-bottom:4px;">현재 버전 <span class="col-r">*</span></div>
-          <select id="upg-fromver" style="width:100%" onchange="updateUpgradeNotes()">
-            <option value="">-- 선택 --</option>
-            <option value="obiee11">OBIEE 11.1.1.x</option>
-            <option value="obiee12">OBIEE 12.2.1.x</option>
-            <option value="oas5">OAS 5.x</option>
-            <option value="oas6">OAS 6.x</option>
-            <option value="oas7">OAS 7.x</option>
-          </select>
-        </div>
-        <div>
-          <div class="fz11 col-m" style="margin-bottom:4px;">OS</div>
-          <select id="upg-os" style="width:100%">
-            <option value="">-- 선택 --</option>
-            <option value="ol8">Oracle Linux 8</option>
-            <option value="ol9">Oracle Linux 9</option>
-            <option value="rhel8">RHEL 8</option>
-            <option value="rhel9">RHEL 9</option>
-          </select>
-        </div>
-        <div>
-          <div class="fz11 col-m" style="margin-bottom:4px;">JDK 버전</div>
-          <input type="text" id="upg-jdk" placeholder="예: 17.0.8" style="width:100%">
-        </div>
-        <div>
-          <div class="fz11 col-m" style="margin-bottom:4px;">DB 유형</div>
-          <select id="upg-db" style="width:100%">
-            <option value="">-- 선택 --</option>
-            <option value="oracle19">Oracle DB 19c</option>
-            <option value="oracle21">Oracle DB 21c</option>
-            <option value="oracle23">Oracle DB 23c</option>
-          </select>
-        </div>
-      </div>
-      <div class="g2 mt14">
-        <div>
-          <div class="fz11 col-m" style="margin-bottom:4px;">ORACLE_HOME 경로</div>
-          <input type="text" id="upg-ohome" placeholder="/u01/oracle/products/OAS2026" style="width:100%">
-        </div>
-        <div>
-          <div class="fz11 col-m" style="margin-bottom:4px;">DOMAIN_HOME 경로</div>
-          <input type="text" id="upg-dhome" placeholder="/u01/oracle/config/domains/bi" style="width:100%">
-        </div>
-      </div>
-      <div class="g4 mt14">
-        <div>
-          <div class="fz11 col-m" style="margin-bottom:4px;">인증 방식</div>
-          <select id="upg-auth" style="width:100%" onchange="updateUpgradeNotes()">
-            <option value="db">DB 인증</option>
-            <option value="ldap">LDAP / Active Directory</option>
-            <option value="oid">Oracle OID</option>
-            <option value="idcs">OCI IAM / IDCS</option>
-            <option value="krb">Kerberos</option>
-          </select>
-        </div>
-        <div>
-          <div class="fz11 col-m" style="margin-bottom:4px;">커스텀 스킨</div>
-          <select id="upg-skin" style="width:100%" onchange="updateUpgradeNotes()">
-            <option value="no">없음</option>
-            <option value="yes">있음</option>
-          </select>
-        </div>
-        <div>
-          <div class="fz11 col-m" style="margin-bottom:4px;">Writeback 사용</div>
-          <select id="upg-wb" style="width:100%" onchange="updateUpgradeNotes()">
-            <option value="no">없음</option>
-            <option value="yes">있음</option>
-          </select>
-        </div>
-        <div>
-          <div class="fz11 col-m" style="margin-bottom:4px;">SSO 연동</div>
-          <select id="upg-sso" style="width:100%" onchange="updateUpgradeNotes()">
-            <option value="no">없음</option>
-            <option value="yes">있음</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 카탈로그 현황 -->
-  <div class="sec">
-    <div class="sec-hd">
-      <div><div class="sec-title" style="font-size:15px;">카탈로그 현황</div><div class="sec-desc">GET /catalog/{type} — API 자동 수집</div></div>
-    </div>
-    <div id="upg-catalog-grid" class="g4">
-      <div class="card card-sm" style="grid-column:1/-1;text-align:center;padding:24px;color:var(--muted);">'API 정보 수집' 버튼을 누르세요</div>
-    </div>
-  </div>
-
-  <!-- 시스템 설정 -->
-  <div class="sec">
-    <div class="sec-hd">
-      <div><div class="sec-title" style="font-size:15px;">시스템 설정</div><div class="sec-desc">GET /system/settings — API 자동 수집</div></div>
-    </div>
-    <div class="card" style="overflow:auto;">
-      <table class="tbl">
-        <thead><tr><th>설정 항목</th><th>현재 값</th></tr></thead>
-        <tbody id="upg-settings-body">
-          <tr><td colspan="2" class="col-m" style="text-align:center;padding:20px;">'API 정보 수집' 후 표시됩니다</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- 안전 도메인 -->
-  <div class="sec">
-    <div class="sec-hd">
-      <div><div class="sec-title" style="font-size:15px;">안전 도메인</div><div class="sec-desc">GET /system/safeDomains — 임베딩 허용 도메인 목록</div></div>
-    </div>
-    <div class="card" style="overflow:auto;">
-      <table class="tbl">
-        <thead><tr><th>도메인</th><th style="width:120px;">유형</th></tr></thead>
-        <tbody id="upg-domains-body">
-          <tr><td colspan="2" class="col-m" style="text-align:center;padding:20px;">'API 정보 수집' 후 표시됩니다</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- 업그레이드 주의사항 -->
-  <div class="sec" id="upg-notes-sec" style="display:none">
-    <div class="sec-hd">
-      <div><div class="sec-title" style="font-size:15px;">업그레이드 주의사항</div><div class="sec-desc">선택한 현재 버전 기준 자동 생성</div></div>
-    </div>
-    <div id="upg-notes-body"></div>
-  </div>
-
-</div><!-- /p-upgrade -->
-
-
-<!-- ╔══════════════════════════════════════════════════════════╗ -->
-<!-- ║  PANEL 7 – 패치·업그레이드 점검                           ║ -->
-<!-- ╚══════════════════════════════════════════════════════════╝ -->
+<!-- PANEL 6 - patch checklist -->
 <div class="panel" id="p-patch">
 
   <!-- 스냅샷 백업 -->
@@ -1183,15 +919,14 @@ const API_CANDIDATES = [
   '/analytics/api/20210901',
   '/bi/api/20210901',
 ];
-let allOrphans=[], patchState={};
+let patchState={};
 
 // ── tab routing ────────────────────────────────────────
-const TABS = ['health','resource','logs','content','usage','orphan','upgrade','patch','runbook'];
+const TABS = ['health','resource','logs','content','usage','patch','runbook'];
 function goTab(name){
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on', TABS[i]===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.getElementById('p-'+name).classList.add('on');
-  if(name === 'upgrade') detectServerVersion();
   if(name === 'logs'   && S.connected && !S.isDemo) loadLogsAPI();
   if(name === 'usage'  && S.connected && !S.isDemo) loadUsage();
 }
@@ -1437,13 +1172,6 @@ function loadResDemo(){
     const vc =d.pct>=90?'col-r':d.pct>=80?'col-y':'';
     return `<div class="res-row" style="margin-top:8px;"><span class="res-lbl">${d.mount} <span class="fz11 col-m">(${d.total})</span></span><span class="res-val ${vc}">${d.pct}%</span></div><div class="pbar"><div class="pfill ${cls}" style="width:${d.pct}%"></div></div>`;
   }).join('');
-  document.getElementById('jvm-used').textContent='4,200 MB';
-  document.getElementById('jvm-max').textContent='최대: 8,192 MB';
-  document.getElementById('jvm-bar').style.width='51%';
-  document.getElementById('jvm-gc').textContent='12';
-  document.getElementById('jvm-gct').textContent='840 ms';
-  document.getElementById('jvm-th').textContent='124';
-  document.getElementById('jvm-dm').textContent='98';
 }
 
 function applyRes(key, pct){
@@ -1455,24 +1183,6 @@ function applyRes(key, pct){
   document.getElementById(key+'-bar').style.width=pct+'%';
   document.getElementById(key+'-b').className='badge '+bcls;
   document.getElementById(key+'-b').textContent=btxt;
-}
-
-function applyManual(){
-  const cpu=+document.getElementById('m-cpu').value;
-  const mem=+document.getElementById('m-mem').value;
-  const disk=+document.getElementById('m-disk').value;
-  const swap=+document.getElementById('m-swap').value;
-  if(cpu)  applyRes('rcpu',cpu);
-  if(mem)  applyRes('rmem',mem);
-  if(swap) applyRes('rswap',swap);
-  if(disk){
-    const cls=disk>=90?'pf-r':disk>=80?'pf-y':'pf-g';
-    const vc=disk>=90?'col-r':disk>=80?'col-y':'';
-    document.getElementById('diskList').innerHTML=
-      `<div class="res-row mt8"><span class="res-lbl">전체 (수동입력)</span><span class="res-val ${vc}">${disk}%</span></div><div class="pbar"><div class="pfill ${cls}" style="width:${disk}%"></div></div>`;
-  }
-  const bad=cpu>=70||mem>=75||disk>=80||swap>=50;
-  document.getElementById('resAlert').style.display=bad?'flex':'none';
 }
 
 // ── logs ───────────────────────────────────────────────
@@ -1516,16 +1226,12 @@ async function loadLogsAPI(){
 
 function loadLogsDemo(){
   allLogs=[
-    {t:'2026-06-25 09:14:22',lv:'ERROR',  src:'obips1',  msg:'Connection pool exhausted: DataSource [sales_db]'},
-    {t:'2026-06-25 09:10:05',lv:'WARNING',src:'nqserver', msg:'Query execution time exceeded threshold: 45s'},
-    {t:'2026-06-25 08:55:11',lv:'ERROR',  src:'sawlog',   msg:'Unable to connect to BI Server: timeout after 30s'},
-    {t:'2026-06-25 08:30:00',lv:'INFO',   src:'obips1',   msg:'User admin logged in successfully'},
-    {t:'2026-06-25 07:45:33',lv:'WARNING',src:'obisch1',  msg:'Scheduled job [Monthly_Report] delayed 15 minutes'},
-    {t:'2026-06-25 06:00:01',lv:'INFO',   src:'domain',   msg:'WebLogic server started successfully on port 7001'},
-    {t:'2026-06-24 23:15:42',lv:'ERROR',  src:'nqserver', msg:'RPD consistency check failed: 3 errors found'},
-    {t:'2026-06-24 22:00:00',lv:'INFO',   src:'obisch1',  msg:'Scheduled backup completed successfully'},
-    {t:'2026-06-24 18:30:15',lv:'WARNING',src:'obips1',   msg:'Cache hit rate below 60%: consider cache rebuild'},
-    {t:'2026-06-24 15:22:08',lv:'ERROR',  src:'sawlog',   msg:'ODBC error: ORA-12154 TNS could not resolve'},
+    {t:'2026-06-25 09:14:22',lv:'ERROR',  src:'bi_server1', msg:'Application deployment health check failed'},
+    {t:'2026-06-25 09:10:05',lv:'WARNING',src:'bi_server1', msg:'Managed Server response time exceeded threshold'},
+    {t:'2026-06-25 08:55:11',lv:'ERROR',  src:'AdminServer', msg:'Node Manager connection timed out'},
+    {t:'2026-06-25 08:30:00',lv:'INFO',   src:'AdminServer', msg:'AdminServer started successfully on port 7001'},
+    {t:'2026-06-24 23:15:42',lv:'ERROR',  src:'obis1', msg:'Repository consistency check failed'},
+    {t:'2026-06-24 18:30:15',lv:'WARNING',src:'obis1', msg:'Query execution time exceeded threshold'},
   ];
   document.getElementById('log-file-info').style.display = 'none';
   updateLogCounters(allLogs);
@@ -1824,268 +1530,6 @@ async function detectUnusedContent(){
   }
 }
 
-// ── orphan ─────────────────────────────────────────────
-function scanOrphansDemo(){
-  allOrphans=[
-    {name:'구매팀 현황',      type:'대시보드',owner:'jung.sh (비활성)', date:'2025-11-12',path:'/shared/Purchase',action:'소유권 이전'},
-    {name:'2023 연간 실적',   type:'워크북',  owner:'oh.th (비활성)',   date:'2024-03-05',path:'/shared/Finance', action:'검토 후 삭제'},
-    {name:'물류 KPI',         type:'대시보드',owner:'yoon.js (비활성)', date:'2025-08-20',path:'/shared/Logistics',action:'소유권 이전'},
-    {name:'구 CRM 데이터',    type:'데이터셋',owner:'han.mj (비활성)',  date:'2023-12-01',path:'/shared/CRM/old', action:'검토 후 삭제'},
-    {name:'테스트 대시보드',  type:'대시보드',owner:'deleted_user',     date:'2024-07-14',path:'/users/del',       action:'즉시 삭제'},
-  ];
-  document.getElementById('o-total').textContent=allOrphans.length;
-  document.getElementById('o-acct').textContent=4;
-  document.getElementById('o-urgent').textContent=allOrphans.filter(o=>o.action==='즉시 삭제').length;
-  document.getElementById('tbOrphan').textContent=allOrphans.length;
-  document.getElementById('tbOrphan').style.display='inline-block';
-  renderOrphans(allOrphans);
-}
-const ACT_CLS={'소유권 이전':'b-yellow','검토 후 삭제':'b-yellow','즉시 삭제':'b-red'};
-function renderOrphans(rows){
-  document.getElementById('orphanBody').innerHTML=rows.length
-    ?rows.map(o=>`<tr><td class="fw7">${o.name}</td><td><span class="badge b-blue">${o.type}</span></td><td class="col-r">${o.owner}</td><td class="col-m">${o.date}</td><td class="mono col-m">${o.path}</td><td><span class="badge ${ACT_CLS[o.action]||'b-gray'}">${o.action}</span></td></tr>`).join('')
-    :`<tr><td colspan="6" class="col-m" style="text-align:center;padding:20px;">탐지된 항목 없음</td></tr>`;
-}
-function filterOrphans(){
-  const q=document.getElementById('oQ').value.toLowerCase();
-  const tp=document.getElementById('oType').value;
-  renderOrphans(allOrphans.filter(o=>(!tp||o.type===tp)&&(!q||o.name.toLowerCase().includes(q)||o.owner.toLowerCase().includes(q))));
-}
-
-// ── upgrade assessment ─────────────────────────────────
-async function detectServerVersion(){
-  const banner = document.getElementById('upg-ver-banner');
-  const errBanner = document.getElementById('upg-ver-err');
-  banner.style.display = 'none';
-  errBanner.style.display = 'none';
-  try {
-    const r = await fetch(mgmtUrl('/version'), {credentials:'omit'});
-    if(!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
-    if(d.version){
-      document.getElementById('upg-ver-str').textContent = d.version;
-      document.getElementById('upg-ver-src').textContent = '(출처: ' + d.source + ')';
-      banner.style.display = 'flex';
-      autoSelectVersion(d.version);
-    } else {
-      const msg = d.error || '버전 정보 없음';
-      document.getElementById('upg-ver-err-msg').textContent = msg;
-      errBanner.style.display = 'flex';
-    }
-  } catch(e){
-    // metrics_server.py 미실행 시 조용히 무시 (배너 숨김 유지)
-  }
-}
-
-function autoSelectVersion(ver){
-  const sel = document.getElementById('upg-fromver');
-  if(!sel || !ver) return;
-  const v = ver.trim();
-  if     (/^(7\.|2026)/i.test(v))  sel.value = 'oas7';
-  else if(/^6\./i.test(v))         sel.value = 'oas6';
-  else if(/^5\./i.test(v))         sel.value = 'oas5';
-  else if(/^12\./i.test(v))        sel.value = 'obiee12';
-  else if(/^11\./i.test(v))        sel.value = 'obiee11';
-  updateUpgradeNotes();
-}
-
-const UPG_CATALOG_TYPES = [
-  { key:'workbooks',   label:'워크북',       color:'var(--green)'  },
-  { key:'datasets',    label:'데이터셋',     color:'var(--orange)' },
-  { key:'dataflows',   label:'데이터플로우', color:'var(--blue)'   },
-  { key:'sequences',   label:'시퀀스',       color:'var(--yellow)' },
-  { key:'analyses',    label:'분석 (Answers)',color:'var(--text2)' },
-  { key:'dashboards',  label:'대시보드',     color:'var(--blue)'   },
-  { key:'connections', label:'데이터 연결',  color:'var(--muted)'  },
-];
-
-let upgData = {};
-
-async function collectUpgradeInfo(){
-  if(!S.connected || S.isDemo){ cStat('서버에 연결 후 실행하세요.','col-y'); return; }
-
-  // 카탈로그 유형별 카운트 (병렬 요청)
-  const counts = await Promise.all(UPG_CATALOG_TYPES.map(async t => {
-    try {
-      const d = await fetchOAS('/catalog/' + t.key + '?itemPerPage=1');
-      return { ...t, count: d.totalResults ?? d.count ?? d.items?.length ?? 0 };
-    } catch(_){ return { ...t, count: null }; }
-  }));
-  upgData.catalog = counts;
-
-  const total = counts.reduce((s,c) => s + (c.count||0), 0);
-  document.getElementById('upg-catalog-grid').innerHTML =
-    counts.map(c => `
-      <div class="card card-sm" style="border-top:3px solid ${c.color}">
-        <div class="ct">${c.label}</div>
-        <div class="big-num">${c.count !== null ? c.count : '—'}</div>
-      </div>`).join('') +
-    `<div class="card card-sm" style="border-top:3px solid var(--red)">
-       <div class="ct">전체 합계</div>
-       <div class="big-num">${total}</div>
-     </div>`;
-
-  // 시스템 설정
-  try {
-    const sys = await fetchOAS('/system/settings');
-    upgData.settings = sys;
-    const rows = flattenSettings(sys);
-    document.getElementById('upg-settings-body').innerHTML = rows.length
-      ? rows.map(([k,v]) => `<tr><td class="col-m mono" style="font-size:11px;">${k}</td><td>${v}</td></tr>`).join('')
-      : '<tr><td colspan="2" class="col-m" style="text-align:center;padding:16px;">설정 항목 없음</td></tr>';
-  } catch(err){
-    document.getElementById('upg-settings-body').innerHTML =
-      `<tr><td colspan="2" class="col-r" style="text-align:center;padding:16px;">조회 불가: ${err.message}</td></tr>`;
-  }
-
-  // 안전 도메인
-  try {
-    const sd = await fetchOAS('/system/safeDomains');
-    upgData.safeDomains = sd;
-    const items = sd.items || (Array.isArray(sd) ? sd : []);
-    document.getElementById('upg-domains-body').innerHTML = items.length
-      ? items.map(d => `<tr>
-          <td class="mono">${d.domain || d.url || d.id || JSON.stringify(d)}</td>
-          <td class="col-m">${d.type || '--'}</td>
-        </tr>`).join('')
-      : '<tr><td colspan="2" class="col-m" style="text-align:center;padding:16px;">등록된 도메인 없음</td></tr>';
-  } catch(err){
-    document.getElementById('upg-domains-body').innerHTML =
-      `<tr><td colspan="2" class="col-r" style="text-align:center;padding:16px;">조회 불가: ${err.message}</td></tr>`;
-  }
-
-  updateUpgradeNotes();
-}
-
-function flattenSettings(obj, prefix=''){
-  const result = [];
-  for(const [k, v] of Object.entries(obj || {})){
-    const key = prefix ? prefix + '.' + k : k;
-    if(v !== null && typeof v === 'object' && !Array.isArray(v))
-      result.push(...flattenSettings(v, key));
-    else
-      result.push([key, Array.isArray(v) ? v.join(', ') : String(v ?? '--')]);
-  }
-  return result;
-}
-
-const UPG_NOTES = {
-  obiee11:[
-    {lv:'error', txt:'OBIEE 11g → OAS 2026 직접 업그레이드 불가. OAS 6.x 또는 7.x를 중간 경유해야 합니다.'},
-    {lv:'warn',  txt:'11g 카탈로그 마이그레이션 도구(Upgrade Assistant) 실행 필요'},
-    {lv:'warn',  txt:'Delivers(iBot) → OAS Agents로 마이그레이션 필요'},
-    {lv:'warn',  txt:'11g 커스텀 스킨·스타일은 OAS 2026과 호환 안 됨 → 재작성 필요'},
-    {lv:'warn',  txt:'Physical Layer RPD 검토 필요: 11g 일부 드라이버·연결 유형 변경됨'},
-    {lv:'info',  txt:'JDK 17 이상 필요 (OAS 2026 요구사항)'},
-    {lv:'info',  txt:'Oracle DB 19c 이상 권장 (RCU 스키마)'},
-    {lv:'info',  txt:'WebLogic 14.1.x 이상 필요'},
-  ],
-  obiee12:[
-    {lv:'warn',  txt:'OBIEE 12c RCU 스키마 → OAS 2026 스키마로 업그레이드(runInstaller) 필요'},
-    {lv:'warn',  txt:'12c 카탈로그 호환성 검증 필요 — 대부분 호환되나 일부 Answers 보고서 확인'},
-    {lv:'warn',  txt:'WebLogic 14.1.x 이상으로 업그레이드 필요'},
-    {lv:'info',  txt:'JDK 17 이상 필요'},
-    {lv:'info',  txt:'OAS 2026은 12c 대비 DV(Data Visualization) 기능 대폭 강화'},
-    {lv:'info',  txt:'기존 RPD(물리 계층·비즈니스 계층·프레젠테이션 계층) 대부분 호환'},
-  ],
-  oas5:[
-    {lv:'warn',  txt:'OAS 5.x → OAS 2026: OAS 6.x 경유 업그레이드 권장'},
-    {lv:'warn',  txt:'RCU 스키마 버전 확인 후 업그레이드 실행 필요'},
-    {lv:'warn',  txt:'OAS 5.x 연결(Connection) 설정 일부 재구성 필요'},
-    {lv:'info',  txt:'DV 워크북·카탈로그 대부분 호환'},
-    {lv:'info',  txt:'JDK 17 이상 필요'},
-  ],
-  oas6:[
-    {lv:'info',  txt:'OAS 6.x → OAS 2026: 지원되는 업그레이드 경로'},
-    {lv:'warn',  txt:'RCU 스키마 업그레이드 실행 필요 (psa 또는 UA 활용)'},
-    {lv:'warn',  txt:'OHS 설정 파일(httpd.conf, virtual host) 변경사항 검토 필요'},
-    {lv:'info',  txt:'기존 카탈로그·RPD 대부분 호환'},
-    {lv:'info',  txt:'JDK 17 이상 필요'},
-  ],
-  oas7:[
-    {lv:'ok',    txt:'OAS 7.x → OAS 2026: 가장 수월한 업그레이드 경로 (아키텍처 동일)'},
-    {lv:'info',  txt:'패치 번들 적용 또는 전체 재설치 방식 모두 가능'},
-    {lv:'info',  txt:'기존 카탈로그·RPD 완전 호환'},
-    {lv:'warn',  txt:'RCU 스키마 버전 확인 후 필요 시 업그레이드'},
-    {lv:'info',  txt:'JDK 버전 확인 (17 이상 권장)'},
-  ],
-};
-
-const UPG_NOTE_EXTRA = {
-  skin: {lv:'warn', txt:'커스텀 스킨 사용 중: OAS 2026 UI 프레임워크 변경으로 스킨 재검토 필요'},
-  wb:   {lv:'warn', txt:'Writeback 사용 중: 업그레이드 후 Writeback 테이블·쿼리 재검증 필요'},
-  sso:  {lv:'warn', txt:'SSO 연동 사용 중: 업그레이드 후 SSO(OAM/IDCS) 재설정 필요'},
-  ldap: {lv:'warn', txt:'LDAP/AD 인증 사용 중: 업그레이드 후 LDAP 프로바이더 재설정 필요'},
-  krb:  {lv:'warn', txt:'Kerberos 인증 사용 중: Kerberos 설정 파일(krb5.conf) 재배포 필요'},
-};
-
-function updateUpgradeNotes(){
-  const ver  = document.getElementById('upg-fromver')?.value;
-  const sec  = document.getElementById('upg-notes-sec');
-  const body = document.getElementById('upg-notes-body');
-  if(!ver || !UPG_NOTES[ver]){ sec.style.display='none'; return; }
-
-  const notes = [...UPG_NOTES[ver]];
-  if(document.getElementById('upg-skin')?.value === 'yes') notes.push(UPG_NOTE_EXTRA.skin);
-  if(document.getElementById('upg-wb')?.value   === 'yes') notes.push(UPG_NOTE_EXTRA.wb);
-  if(document.getElementById('upg-sso')?.value  === 'yes') notes.push(UPG_NOTE_EXTRA.sso);
-  const auth = document.getElementById('upg-auth')?.value;
-  if(auth === 'ldap' || auth === 'oid') notes.push(UPG_NOTE_EXTRA.ldap);
-  if(auth === 'krb')                    notes.push(UPG_NOTE_EXTRA.krb);
-
-  const clsMap = {error:'a-error', warn:'a-warn', ok:'a-ok', info:''};
-  const iconMap = {error:'🚫', warn:'⚠', ok:'✓', info:'ℹ'};
-  body.innerHTML = notes.map(n =>
-    `<div class="alert ${clsMap[n.lv]}" style="${!clsMap[n.lv]?'background:var(--card2);border:1px solid var(--border);color:var(--text2);':''} margin-bottom:8px;">
-       ${iconMap[n.lv]} ${n.txt}
-     </div>`
-  ).join('');
-  sec.style.display = '';
-}
-
-function exportUpgradeReport(){
-  const g = id => document.getElementById(id)?.value || '--';
-  const fromVer = g('upg-fromver'); const os = g('upg-os');
-  const jdk = g('upg-jdk');         const db = g('upg-db');
-  const ohome = g('upg-ohome');      const dhome = g('upg-dhome');
-  const auth = g('upg-auth');        const wb = g('upg-wb');
-  const sso = g('upg-sso');          const skin = g('upg-skin');
-
-  const hr = '='.repeat(55);
-  const lines = [
-    'OAS 2026 업그레이드 사전 진단 보고서',
-    '생성일시: ' + new Date().toLocaleString('ko-KR'),
-    '대상 서버: ' + (S.url || '--'),
-    hr, '',
-    '[1. 현재 환경]',
-    '  현재 버전  : ' + fromVer,
-    '  목표 버전  : OAS 2026',
-    '  OS         : ' + os,
-    '  JDK        : ' + jdk,
-    '  DB         : ' + db,
-    '  ORACLE_HOME: ' + ohome,
-    '  DOMAIN_HOME: ' + dhome,
-    '  인증 방식  : ' + auth,
-    '  커스텀 스킨: ' + (skin==='yes'?'있음':'없음'),
-    '  Writeback  : ' + (wb==='yes'?'사용':'미사용'),
-    '  SSO        : ' + (sso==='yes'?'사용':'미사용'),
-    '', hr, '',
-    '[2. 카탈로그 현황 (API 수집)]',
-    ...(upgData.catalog||[]).map(c => `  ${c.label.padEnd(16)}: ${c.count !== null ? c.count + '개' : '미수집'}`),
-    '', hr, '',
-    '[3. 안전 도메인]',
-    ...((upgData.safeDomains?.items||[]).map(d => '  ' + (d.domain||d.id||JSON.stringify(d)))),
-    '', hr, '',
-    '[4. 업그레이드 주의사항]',
-    ...((UPG_NOTES[fromVer]||[]).map(n => `  [${n.lv.toUpperCase()}] ${n.txt}`)),
-  ];
-
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([lines.join('\n')], {type:'text/plain;charset=utf-8'}));
-  a.download = 'oas2026_upgrade_' + new Date().toISOString().slice(0,10) + '.txt';
-  a.click();
-}
-
 // ── snapshot ───────────────────────────────────────────
 function mgmtUrl(path){ return (S.url || window.location.origin) + '/sysmgmt' + path; }
 
@@ -2280,7 +1724,6 @@ migration:{color:'var(--yellow)',label:'환경 이전 절차',eta:'개발→테�
 ]},
 health:{color:'var(--text2)',label:'정기 점검 체크리스트',eta:'월 1회 권장',steps:[
   {title:'로그 에러 검토',desc:'지난 30일 ERROR/WARNING 로그 검토 및 조치 현황 확인'},
-  {title:'소유자 없는 콘텐츠 정리',desc:'퇴사자 소유 콘텐츠 소유권 이전 또는 삭제'},
   {title:'디스크 사용량 추세 확인',desc:'증가 추세 시 오래된 로그·임시 파일 정리'},
   {title:'패치 현황 확인',desc:'Oracle CPU (Critical Patch Update) 최신 적용 여부'},
   {title:'백업 복구 테스트',desc:'최근 백업으로 테스트 환경 복구 가능 여부 검증'},

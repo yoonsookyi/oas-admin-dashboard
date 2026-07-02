@@ -4,7 +4,7 @@ OAS Dashboard - System Metrics & Snapshot HTTP Server
 - Port 9091, localhost only (proxied via OHS)
 - GET  /metrics   → JSON: cpu, memory, swap, disks
 - GET  /version   → JSON: OAS 버전 자동 감지
-- GET  /logs      → JSON: OAS 로그 파일 파싱 결과 (?file=obips&level=ERROR&lines=500)
+- GET  /logs      → JSON: OAS 로그 파일 파싱 결과 (?file=bi_server1&level=ERROR&lines=500)
 - GET  /snapshots → JSON: 백업 디렉터리의 스냅샷 파일 목록
 - POST /snapshot  → 백업 스크립트 실행 후 결과 반환
 """
@@ -69,12 +69,12 @@ _OHS_DH = os.environ.get('OHS_DOMAIN_HOME', '')
 def _ohs_dh(*parts): return os.path.join(_OHS_DH, *parts) if _OHS_DH else ''
 
 # ── OAS 로그 파일 경로 (OAS 2026: servers/<comp>/logs/ 구조) ──
-# obips1, obis1, obisch1 등 컴포넌트별 서버 로그 디렉터리 사용
+# bi_server1, AdminServer, obis1 log directories
 # OHS 로그는 OHS_DOMAIN_HOME 환경변수가 설정된 경우에만 접근 가능
 LOG_FILES = {
-    'obips':    _dh('servers', 'obips1',    'logs', 'sawjsonlog0.log'),
-    'nqserver': _dh('servers', 'obis1',     'logs', 'obis1-diagnostic.json'),
-    'domain':   _dh('servers', 'bi_server1','logs', 'bi_server1.log'),
+    'bi_server1':  _dh('servers', 'bi_server1',  'logs', 'bi_server1.log'),
+    'adminserver': _dh('servers', 'AdminServer', 'logs', 'AdminServer.log'),
+    'obis1':       _dh('servers', 'obis1',       'logs', 'obis1.log'),
 }
 LOG_DEFAULT_LINES = 500
 # ─────────────────────────────────────────────────────────
@@ -313,7 +313,7 @@ _ODL_RE = re.compile(
     r'[^\]]*(?:\[[^\]]*\])*\s*(.*)'                          # message
 )
 
-# nqserver.log 형식: [PID] YYYY-MM-DD HH:MM:SS.mmm ZONE [LEVEL] ... message
+# BI Server log format: [PID] YYYY-MM-DD HH:MM:SS.mmm ZONE [LEVEL] ... message
 _NQ_RE = re.compile(
     r'^\[\d+\]\s+'
     r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?)'
@@ -351,7 +351,7 @@ def parse_log_lines(lines, src_key):
 
         matched = None
 
-        # JSON 포맷 시도 (OAS 2026: sawjsonlog0.log, obis1-diagnostic.json 등)
+        # JSON log format
         if line.startswith('{'):
             try:
                 obj = json.loads(line)
@@ -380,7 +380,7 @@ def parse_log_lines(lines, src_key):
                 matched = {'t': ts_short, 'lv': _norm_level(lv),
                            'src': comp or src_key, 'msg': msg.strip()}
 
-        # nqserver 형식 시도
+        # BI Server log format
         if not matched:
             m = _NQ_RE.match(line)
             if m:
@@ -405,7 +405,7 @@ def parse_log_lines(lines, src_key):
     return result
 
 
-def get_logs(file_key='obips', level_filter='', max_lines=LOG_DEFAULT_LINES):
+def get_logs(file_key='bi_server1', level_filter='', max_lines=LOG_DEFAULT_LINES):
     """지정한 로그 파일에서 최근 max_lines 줄을 읽어 파싱"""
     path = LOG_FILES.get(file_key)
     if not path:
@@ -596,7 +596,7 @@ class Handler(BaseHTTPRequestHandler):
 
         elif path == '/logs':
             try:
-                file_key = qp('file', 'obips')
+                file_key = qp('file', 'bi_server1')
                 level    = qp('level', '')
                 lines    = int(qp('lines', str(LOG_DEFAULT_LINES)))
                 lines    = max(50, min(lines, 5000))
@@ -652,7 +652,7 @@ if __name__ == '__main__':
     print(f'  GET  /metrics   → 시스템 리소스')
     print(f'  GET  /usage     → Usage Tracking 통계 (?period=90&top=20)  [DB: {DB_DSN or "미설정"}, TABLE: {DB_TABLE or "미설정"}]')
     print(f'  GET  /version   → OAS 버전 자동 감지')
-    print(f'  GET  /logs      → OAS 로그 파싱  (?file=obips&level=ERROR&lines=500)')
+    print(f'  GET  /logs      → OAS 로그 파싱  (?file=bi_server1&level=ERROR&lines=500)')
     print(f'  GET  /snapshots → 스냅샷 목록  (BACKUP_DIR: {BACKUP_DIR})')
     print(f'  POST /snapshot  → 스냅샷 생성  (SCRIPT: {BACKUP_SCRIPT})')
     print(f'  DOMAIN_HOME    ={_DH or "(미설정)"}')
