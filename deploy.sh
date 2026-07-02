@@ -567,9 +567,15 @@ hdr "Step 5 — Python 패키지 설치"
 
 PY3=$(command -v python3 || command -v python || true)
 if [[ -z "$PY3" ]]; then
-  err "python3 를 찾을 수 없습니다. Python 3.8 이상을 설치하세요."; exit 1
+  err "python3 not found. Python 3.6 or newer is required."; exit 1
 fi
 ok "Python: $($PY3 --version 2>&1)"
+
+PY_MM=$($PY3 -c 'import sys; print(sys.version_info[0] * 100 + sys.version_info[1])')
+if (( PY_MM < 306 )); then
+  err "Python 3.6 or newer is required. Current: $($PY3 --version 2>&1)"
+  exit 1
+fi
 
 if "$PY3" -m pip --version >/dev/null 2>&1; then
   PIP_CMD=("$PY3" -m pip)
@@ -579,11 +585,30 @@ else
   PIP_CMD=("$PIP_BIN")
 fi
 
+if (( PY_MM < 307 )); then
+  PSUTIL_SPEC="psutil==5.9.8"
+  ORACLEDB_SPEC="oracledb==1.4.2"
+  PIP_BOOTSTRAP=("pip<22" "setuptools<60" "wheel<0.38")
+else
+  PSUTIL_SPEC="psutil"
+  ORACLEDB_SPEC="oracledb"
+  PIP_BOOTSTRAP=("pip" "setuptools" "wheel")
+fi
+
+info "Updating pip tooling for this Python interpreter"
+"${PIP_CMD[@]}" install --user --upgrade "${PIP_BOOTSTRAP[@]}" || {
+  err "pip tooling update failed"
+  exit 1
+}
+
 install_python_package() {
-  local package="$1" module="$2"
-  info "Installing Python package: $package"
-  if ! "${PIP_CMD[@]}" install --user --upgrade "$package"; then
-    err "Python package install failed: $package"
+  local package_spec="$1" module="$2"
+  info "Installing Python package: $package_spec"
+  if ! "${PIP_CMD[@]}" install --user --upgrade --only-binary=:all: "$package_spec"; then
+    err "Python package install failed: $package_spec"
+    src "Binary wheel install was required to avoid compiling on this server."
+    src "For Python 3.6, deploy.sh pins psutil/oracledb to compatible wheel versions."
+    src "If this still fails, install Python 3.8+ or install OS build prerequisites: gcc python3-devel."
     exit 1
   fi
   if ! "$PY3" -c "import $module" >/dev/null 2>&1; then
@@ -593,13 +618,13 @@ install_python_package() {
     src "Pip: ${PIP_CMD[*]}"
     exit 1
   fi
-  ok "$package installed and import verified"
+  ok "$package_spec installed and import verified"
 }
 
-install_python_package psutil psutil
+install_python_package "$PSUTIL_SPEC" psutil
 read -rp "  Install oracledb? Required for Usage Tracking. [y/N]: " inst_db
 if [[ "${inst_db,,}" == "y" ]]; then
-  install_python_package oracledb oracledb
+  install_python_package "$ORACLEDB_SPEC" oracledb
 else
   info "oracledb install skipped"
 fi
