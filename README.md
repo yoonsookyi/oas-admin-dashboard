@@ -58,7 +58,7 @@ bash deploy.sh b   # Option B
 |---|---|
 | 환경 감지 | ORACLE_HOME · ORACLE_INSTANCE · DOMAIN_HOME · OHS 경로를 Oracle Inventory·실행 프로세스·특성 파일 순으로 자동 탐색 |
 | 경로 확인 | 탐색 결과를 화면에 출력, 틀린 경우 직접 수정 입력 가능 |
-| 파일 배치 | OHS `httpd.conf`의 `DocumentRoot` 기준으로 htdocs를 확정하고, `oas-dashboard.html` 복사 후 원본/대상 파일을 검증 |
+| 파일 배치 | OHS `httpd.conf`의 `DocumentRoot` 기준으로 htdocs를 확정 (`.../instances/ohs1/htdocs` 구조 지원), `oas-dashboard.html` 복사 후 원본/대상 파일을 검증 |
 | Python 설치 | Python 3.6은 `psutil==5.9.8` / `oracledb==1.4.2` 호환 wheel 설치, 설치 후 import 검증 |
 | start.sh 생성 | 환경변수 포함한 기동 스크립트 자동 생성 |
 | ProxyPass | OHS httpd.conf에 `/sysmgmt` 프록시 설정 추가 (기존 설정 자동 백업) |
